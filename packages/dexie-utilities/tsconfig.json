@@ -1,0 +1,42 @@
+{
+  "compilerOptions": {
+    "target": "es2015",
+    "lib": [
+      "dom",
+      "dom.iterable",
+      "esnext"
+    ], // the standard typing to be included in the type checking process.
+    "module": "ESNext",
+    "moduleResolution": "node", // module dependencies resolved strategy.
+    "allowJs": true, // whether to allow JavaScript files to be compiled, process and infer types from JS files.
+    "experimentalDecorators": true, // enable decorator syntax like `@observable num = 1`
+    "allowSyntheticDefaultImports": true, // allow default imports from modules with no default export in the type checking process.
+    "skipLibCheck": true, // skip type checking of all the type declaration files(*.d.ts).
+    "esModuleInterop": true, // enables compatibility with Babel, import non-ES modules as default imports.
+    "strict": true, // set the level of type checking to strict mode which is very high, like strictNullChecks and noImplicitAny.
+    "alwaysStrict": true,
+    "strictBindCallApply": true,
+    "strictFunctionTypes": true,
+    "strictNullChecks": true,
+    "strictPropertyInitialization": true,
+    "noUncheckedIndexedAccess": true,
+    "forceConsistentCasingInFileNames": true, // ensures the casing of referenced file names is consistent during the type checking process.
+    "resolveJsonModule": true, // allows modules to be in `.json` file which are useful for configuration files.
+    "isolatedModules": true, // disallow features that require cross-file information for emit.
+    "noEmit": true, // whether to suppress TypesScript generating code during the compilation process.
+    "jsx": "react-jsx", // transpile JSX with `__jsx` invocation rather not `React.createElement`
+    "plugins": [
+      {
+        "name": "typescript-plugin-css-modules"
+      }
+    ],
+  },
+  "include": [
+    "src",
+    "typings"
+  ], // files and folders for TypeScript type checking.
+  "exclude": [
+    "dist",
+    "node_modules"
+  ], // files and folders that will not check TypeScript type.
+}
