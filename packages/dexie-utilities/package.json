@@ -33,6 +33,10 @@
   "dependencies": {
     "lodash-es": "^4.17.21"
   },
+  "peerDependencies": {
+    "dayjs": "^1.11.10",
+    "dexie": "^3.2.4"
+  },
   "devDependencies": {
     "@babel/core": "^7.22.5",
     "@babel/plugin-transform-react-constant-elements": "^7.22.5",

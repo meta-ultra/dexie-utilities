@@ -22,12 +22,12 @@ module.exports = {
     pkg.unpkg && {
       file: pkg.unpkg,
       format: "umd",
-      name: "AppRouter",
+      name: "DexieUtilities",
       // https://rollupjs.org/guide/en/#outputglobals
       globals: {},
     },
   ],
-  external: [],
+  external: ["dayjs", "dexie"],
   plugins: [
     replace({
       "process.env.NODE_ENV": JSON.stringify(process.env.NODE_ENV || "development"),
