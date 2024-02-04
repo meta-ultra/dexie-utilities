@@ -1,0 +1,10 @@
+[villager]
+id.type = "number"
+id.auto-increment = true
+branch.ref = "branch.id"
+group.ref = "group.id"
+name.title = "姓名"
+name.type = "string"
+name.required = "true"
+phone.title = "手机号码"
+phone.type = "string"
