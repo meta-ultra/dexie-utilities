@@ -1,0 +1,44 @@
+import { Table } from "dexie";
+import { db } from "../../db";
+import { type I{{~upperCamelCase entityName~}}, I{{~upperCamelCase entityName~}}TableName } from "./I{{~upperCamelCase entityName~}}";
+{{#each foreigns}}
+import { type I{{~upperCamelCase this.[1].entityName~}}, I{{~upperCamelCase this.[1].entityName~}}TableName, {{upperCamelCase this.[1].entityName}} } from "../I{{~upperCamelCase this.[1].entityName~}}";
+{{/each}}
+
+export class {{upperCamelCase entityName}} implements I{{~upperCamelCase entityName}} {
+  $table: Table;
+
+{{#each fields}}
+  {{this.[0]}}{{~#unless this.[1].required~}}?{{~/unless~}}: {{this.[1].type~}};
+{{/each}}
+
+{{#each foreigns}}
+  {{nameForignField this.[0] this.[1].fieldName}}?: {{upperCamelCase this.[1].entityName~}};
+{{/each}}
+
+  constructor({{#each (sortByRequiredFirst fields)}}{{#if @index}}, {{/if}}{{this.[0]}}{{#unless this.[1].required}}?{{/unless}}: {{this.[1].type}}{{/each}}) {
+    this.$table = db[I{{~upperCamelCase entityName~}}TableName];
+
+  {{#each (sortByRequiredFirst fields)}}
+    {{#if (get this "1.required")}}
+    this.{{~this.[0]}} = {{this.[0]~}};
+    {{else}}
+    if ({{~this.[0]}} !== undefined) this.{{this.[0]}} = {{this.[0]~}};
+    {{/if}}
+  {{/each}}
+  }
+  {{#each foreigns}}
+
+  async load{{~upperCamelCase (nameForignField this.[0] this.[1].fieldName)~}}() {
+    if (this.{{~this.[0]}} !== undefined) {
+      const record = await db[I{{~upperCamelCase this.[1].entityName~}}TableName].get({
+        "{{~this.[1].fieldName~}}": this.{{~this.[0]~}},
+        ...({{{this.[1].condition}}} || {}),
+      });
+      if (record) {
+        this.{{~nameForignField this.[0] this.[1].fieldName}} = record as {{upperCamelCase this.[1].entityName~}};
+      }
+    }
+  }
+  {{/each}}
+}

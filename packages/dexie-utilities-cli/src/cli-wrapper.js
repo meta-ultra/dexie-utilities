@@ -1,12 +1,14 @@
-const { isAbsolute, join, sep } = require("node:path")
-const { writeFileSync } = require("node:fs")
+const { isAbsolute, join, sep, dirname } = require("node:path")
+const { writeFileSync, createReadStream, writeFile, mkdir } = require("node:fs")
+const toml = require("@ltd/j-toml");
+const concat = require("concat-stream");
 const cac = require('cac')
 const { debounce } = require("lodash");
 const { watch } = require("chokidar"); // https://github.com/paulmillr/chokidar
 const { format } = require("prettier"); // https://prettier.io/docs/en/api.html
-const fs = require("node:fs");
-const toml = require("@ltd/j-toml");
-const concat = require("concat-stream");
+const { normalize } = require("./core/normalize.js");
+const { convertToEntries } = require("./core/convertToEntries.js");
+const { generateCode } = require("./core/generateCode.js");
 
 const cli = cac('dexie-utilities');
 
@@ -26,10 +28,10 @@ cli.option('--mock-adapter [mockAdapter]', 'The import statement path of mock ad
   default: "./utils/mockAdapter",
 })
 cli.option('--source, -s [folder]', 'The app folder path', {
-  default: './src/app',
+  default: './src/db/metadata.toml',
 })
 cli.option('--output, -o [file]', 'The router file path', {
-  default: './src/router.tsx',
+  default: './src/db',
 })
 
 const parsed = cli.parse()
@@ -38,15 +40,34 @@ if (!parsed.options.h && !parsed.options.v) {
   const outputPath = isAbsolute(cli.options.output) ? cli.options.output : join(process.cwd(), cli.options.output)
 
   const main = async () => {
-     
-  fs.createReadStream(join(__dirname, '../examples/metadata.toml'), 'utf8').pipe(concat(function(data) {
-    var parsed = toml.parse(data);
-    console.dir(parsed);
-  }));
+    createReadStream(join(sourcePath), 'utf8').pipe(concat(async function(data) {
+      var metadata = toml.parse(data, { bigint: false });
+      normalize(metadata);
+      const entities = convertToEntries(metadata);
+      const code = generateCode(entities);
+      await Promise.all(Object.entries(code).map(([path, source]) => {
+        return new Promise((resolve, reject) => {
+          const fullPath = join(outputPath, path);
+          mkdir(dirname(fullPath), { recursive: true }, (err) => {
+            if (!err) {
+              writeFile(fullPath, source, "utf-8", (err) => {
+                if (err) {
+                  reject(err);
+                }
+                else {
+                  resolve();
+                }
+              });
+            }
+          });
+          
+        })
+      }));
+    }));
 
-    // if (cli.options.watch) {
-    //   console.log('dexie-utilities is running.');
-    // }
+    if (cli.options.watch) {
+      console.log('dexie-utilities is running.');
+    }
   };
 
   if (cli.options.watch) {

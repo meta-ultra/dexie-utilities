@@ -1,0 +1,9 @@
+export const I{{~upperCamelCase entityName~}}TableName = "{{getTableName entityName}}";
+export const I{{~upperCamelCase entityName~}}Schema = "{{getIndexes fields}}";
+export type I{{~upperCamelCase entityName~}}KeyType = {{{getKeyType fields}}};
+
+export interface I{{~upperCamelCase entityName}} {
+  {{#each fields}}
+    {{this.[0]}}{{#unless this.[1].required}}?{{/unless}}: {{this.[1].type}};
+  {{/each}}
+}
