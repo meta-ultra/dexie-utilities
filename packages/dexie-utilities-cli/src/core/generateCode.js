@@ -2,9 +2,12 @@
 const { readFileSync } = require("node:fs");
 const { join, isAbsolute } = require("node:path");
 const Handlebars = require("handlebars");
-const { get, isString, camelCase, upperFirst, lowerCase } = require("lodash");
+const { get, isString, camelCase, upperFirst, lowerCase, kebabCase } = require("lodash");
 
 /* Utilities */
+const pluralize = (x) => {
+  return /(ch|sh|x|s)$/.test(x) ? x + "es" : x + "s";
+};
 const readTemplateSync = (path) =>
   readFileSync(isAbsolute(path) ? path : join(__dirname, path)).toString("utf-8");
 /* End of Utilities */
@@ -18,16 +21,37 @@ Handlebars.registerHelper(
   (value) => value === undefined || value === null || !value.length
 );
 Handlebars.registerHelper("lowerCase", (value) => isString(value) ? lowerCase(value) : value);
-Handlebars.registerHelper("frameYupSchema", (field) => {
+Handlebars.registerHelper("frameYupSchema", (field, strict) => {
   const schema = [`${lowerCase(field.type)}()`];
   if (field.type === "number") {
     // schema for number
     if (/int(eger)?/i.test(field["$original-type"])) {
       schema.push("integer()");
     }
+
+    if (strict === true) {
+      if ("min" in field) {
+        schema.push(`min(${field.min})`);
+      }
+      if ("max" in field) {
+        schema.push(`max(${field.max})`);
+      }
+    }
   }
 
-  return schema.length ? schema.join(".") : "";
+  if (field.type === "string") {
+    if (strict === true) {
+      if ("format" in field) {
+        schema.push(`matches(RegExp("${field.format}"))`);
+      }
+    }
+  }
+
+  if (strict === true && field.required) {
+    schema.push("required()");
+  }
+
+  return schema.length ? new Handlebars.SafeString(schema.join(".")) : "";
 });
 Handlebars.registerHelper("getPrimaryField", (fields) => {
   const field = fields.find((field) => {
@@ -50,7 +74,7 @@ Handlebars.registerHelper(
   "getTableName",
   (value) => {
     if (isString(value)) {
-      return /(ch|sh|s|x)^/.test(value) ? value + "es" : value + "s";
+      return pluralize(value);
     }
     else {
       return value;
@@ -137,19 +161,19 @@ const generateDBCode = (entities) => {
   return code;
 }
 
-const generateRouteHandlerCode = (entities) => {
+const generateRouteHandlerCode = (entities, databasePackage) => {
   const code = {};
   for (const [entityName, fields, foreigns] of entities) {
-    code[`${camelCase(entityName)}/route.ts`] = generateCodeOnFly("../templates/route-handlers/Route.hbs", {entityName, fields, foreigns});
-    code[`${camelCase(entityName)}/[id]/route.ts`] = generateCodeOnFly("../templates/route-handlers/Route[id].hbs", {entityName, fields, foreigns});
+    code[`${pluralize(kebabCase(entityName))}/route.ts`] = generateCodeOnFly("../templates/route-handlers/Route.hbs", {entityName, fields, foreigns, databasePackage});
+    code[`${pluralize(kebabCase(entityName))}/[id]/route.ts`] = generateCodeOnFly("../templates/route-handlers/Route[id].hbs", {entityName, fields, foreigns, databasePackage});
   }
 
   return code;
 }
 
-const generateCode = (entities) => {
+const generateCode = (entities, databasePackage) => {
   const db = generateDBCode(entities);
-  const routeHandlers = generateRouteHandlerCode(entities);
+  const routeHandlers = generateRouteHandlerCode(entities, databasePackage);
 
   return {db, routeHandlers};
 }

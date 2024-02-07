@@ -83,3 +83,26 @@ type = "number"
 precision = 0
 min = 0
 max = 10
+
+[domicile]
+id.type = "number"
+id.auto-increment = true
+branchId.ref = "branch.id"
+groupId.ref = "group.id"
+name.title = "名称"
+name.type = "string"
+name.required = true
+
+[domicile-visit]
+id.type = "number"
+id.auto-increment = true
+domicileId.ref = "domicile.id"
+domicileId.required = true
+villagerId.ref = "villager.id"
+villagerId.required = true
+visit_time.title = "走访时间"
+visit_time.type = "date"
+visit_time.format = "YYYY/MM/DD HH:mm:ss"
+visit_time.required = true
+remark.title = "村民反馈"
+remark.type = "string"

@@ -3,7 +3,7 @@ import { query } from "@meta-ultra/dexie-utilities";
 import { isEqual } from "lodash-es";
 import dayjs from "dayjs";
 import * as yup from "yup";
-import { db, I{{~upperCamelCase entityName~}}TableName{{#unless (isNilorEmpty foreigns)}}, {{upperCamelCase entityName}}{{/unless}} } from "@/db";
+import { db, I{{~upperCamelCase entityName~}}TableName{{#unless (isNilorEmpty foreigns)}}, {{upperCamelCase entityName}}{{/unless}} } from "{{databasePackage}}";
 
 const $table = db[I{{~upperCamelCase entityName~}}TableName];
 
@@ -15,21 +15,16 @@ const paramsSchemaOfGet = yup.object({
 export const GET = withValidation(
   { paramsSchema: paramsSchemaOfGet },
   async function (request: NextRequest, context: NextContext) {
-    const params = paramsSchemaOfGet.cast(context.params);
-
     try {
+      const params = paramsSchemaOfGet.cast(context.params);
       const data = await $table.get(params){{#unless (isNilorEmpty foreigns)}} as {{upperCamelCase entityName}} | undefined{{/unless}};
       {{#unless (isNilorEmpty foreigns)}}
       if (data) {
-        await Promise.all(
-          data.map(async (record: {{upperCamelCase entityName}}) => {
-            return Promise.all([
-              {{#each foreigns}}
-              await record.load{{upperCamelCase (nameForignField this.[0] this.[1].fieldName)}}(),
-              {{/each}}
-            ])
-          })
-        );
+        await Promise.all([
+          {{#each foreigns}}
+          await data.load{{upperCamelCase (nameForignField this.[0] this.[1].fieldName)}}(),
+          {{/each}}
+        ]);
       }
       {{/unless}}
 
@@ -42,16 +37,14 @@ export const GET = withValidation(
       return NextResponse.json({
         code: 1,
         error: e,
-        message: e.message,
+        message: (e as {message?: string}).message,
       });
     }
   }
 );
 
 const paramsSchemaOfPut = yup.object({
-  {{#each fields}}
-  {{this.[0]~}}: yup.{{~frameYupSchema this.[1]~}},
-  {{/each}}
+  {{#with (getPrimaryField fields)}}id: yup.{{~frameYupSchema this.[1] true~}}{{/with}}.required()
 });
 const bodySchemaOfPut = yup.object({
   {{#each fields}}
@@ -64,18 +57,17 @@ export const PUT = withValidation(
     bodySchema: bodySchemaOfPut,
   },
   async function (request: NextRequest, context: NextContext) {
-    const params = paramsSchemaOfPut.cast(context.params);
-    const data = bodySchemaOfPut.cast(await request.json());
-
     try {
-      await $table.update(params, data);
+      const params = paramsSchemaOfPut.cast(context.params);
+      const data = bodySchemaOfPut.cast(await request.json());
+      await $table.update(params.id, data);
       return NextResponse.json({ code: 0 });
     }
     catch(e) {
       return NextResponse.json({
         code: 1,
         error: e,
-        message: e.message,
+        message: (e as {message?: string}).message,
       });
     }
   }
