@@ -2,7 +2,7 @@
 const { readFileSync } = require("node:fs");
 const { join, isAbsolute } = require("node:path");
 const Handlebars = require("handlebars");
-const { get, isString, camelCase, upperFirst } = require("lodash");
+const { get, isString, camelCase, upperFirst, lowerCase } = require("lodash");
 
 /* Utilities */
 const readTemplateSync = (path) =>
@@ -17,6 +17,24 @@ Handlebars.registerHelper(
   "isNilorEmpty",
   (value) => value === undefined || value === null || !value.length
 );
+Handlebars.registerHelper("lowerCase", (value) => isString(value) ? lowerCase(value) : value);
+Handlebars.registerHelper("frameYupSchema", (field) => {
+  const schema = [`${lowerCase(field.type)}()`];
+  if (field.type === "number") {
+    // schema for number
+    if (/int(eger)?/i.test(field["$original-type"])) {
+      schema.push("integer()");
+    }
+  }
+
+  return schema.length ? schema.join(".") : "";
+});
+Handlebars.registerHelper("getPrimaryField", (fields) => {
+  const field = fields.find((field) => {
+    return field[1]["primary-key"] || field[1]["auto-increment"];
+  })
+  return field;
+});
 Handlebars.registerHelper(
   "upperCamelCase",
   (value) => {
@@ -104,23 +122,40 @@ const generateCodeOnFly = (path, context, options) => {
   return template(context, options);
 };
 
-const generateCode = (entities) => {
+const generateDBCode = (entities) => {
   const code = {
-    "db.ts": generateCodeOnFly("../templates/DB.hbs", {entities}),
-    "index.ts": generateCodeOnFly("../templates/DBIndex.hbs", {entities}),
-  }
+    "db.ts": generateCodeOnFly("../templates/db/DB.hbs", {entities}),
+    "index.ts": generateCodeOnFly("../templates/db/DBIndex.hbs", {entities}),
+  };
   for (const [entityName, fields, foreigns] of entities) {
-    code[`entities/I${upperFirst(camelCase(entityName))}/index.ts`] = generateCodeOnFly("../templates/EntityIndex.hbs", {entityName, fields, foreigns});
-    code[`entities/I${upperFirst(camelCase(entityName))}/I${upperFirst(camelCase(entityName))}.ts`] = generateCodeOnFly("../templates/IEntity.hbs", {entityName, fields, foreigns});
-    code[`entities/I${upperFirst(camelCase(entityName))}/${upperFirst(camelCase(entityName))}.ts`] = generateCodeOnFly("../templates/Entity.hbs", {entityName, fields, foreigns});
-    code[`entities/I${upperFirst(camelCase(entityName))}/I${upperFirst(camelCase(entityName))}Populator.ts`] = generateCodeOnFly("../templates/EntityPopulator.hbs", {entityName, fields, foreigns});
+    code[`entities/I${upperFirst(camelCase(entityName))}/index.ts`] = generateCodeOnFly("../templates/db/EntityIndex.hbs", {entityName, fields, foreigns});
+    code[`entities/I${upperFirst(camelCase(entityName))}/I${upperFirst(camelCase(entityName))}.ts`] = generateCodeOnFly("../templates/db/IEntity.hbs", {entityName, fields, foreigns});
+    code[`entities/I${upperFirst(camelCase(entityName))}/${upperFirst(camelCase(entityName))}.ts`] = generateCodeOnFly("../templates/db/Entity.hbs", {entityName, fields, foreigns});
+    code[`entities/I${upperFirst(camelCase(entityName))}/I${upperFirst(camelCase(entityName))}Populator.ts`] = generateCodeOnFly("../templates/db/EntityPopulator.hbs", {entityName, fields, foreigns});
   }
 
   return code;
 }
 
+const generateRouteHandlerCode = (entities) => {
+  const code = {};
+  for (const [entityName, fields, foreigns] of entities) {
+    code[`${camelCase(entityName)}/route.ts`] = generateCodeOnFly("../templates/route-handlers/Route.hbs", {entityName, fields, foreigns});
+    code[`${camelCase(entityName)}/[id]/route.ts`] = generateCodeOnFly("../templates/route-handlers/Route[id].hbs", {entityName, fields, foreigns});
+  }
+
+  return code;
+}
+
+const generateCode = (entities) => {
+  const db = generateDBCode(entities);
+  const routeHandlers = generateRouteHandlerCode(entities);
+
+  return {db, routeHandlers};
+}
+
 module.exports = {
-  generateCode,
   generateCodeOnFly,
   readTemplateSync,
+  generateCode,
 }

@@ -1,0 +1,132 @@
+import { type NextRequest, type NextContext, NextResponse, objectify, withValidation } from "@meta-ultra/app-router";
+import { query } from "@meta-ultra/dexie-utilities";
+import { isEqual } from "lodash-es";
+import dayjs from "dayjs";
+import * as yup from "yup";
+import { db, I{{~upperCamelCase entityName~}}TableName{{#unless (isNilorEmpty foreigns)}}, {{upperCamelCase entityName}}{{/unless}} } from "@/db";
+
+const $table = db[I{{~upperCamelCase entityName~}}TableName];
+
+const searchParamsSchemaOfGet = yup.object({
+  page: yup.number().integer().min(1),
+  pageSize: yup.number().integer().min(1),
+  {{!-- {{#unless (isNilorEmpty (getPrimaryField fields))}}
+  {{#with (getPrimaryField fields)}}
+  {{this.[0]}}s: yup.array().of(yup.{{frameYupSchema this.[1]}}),
+  {{/with}}
+  {{/unless}} --}}
+  {{#each fields}}
+  {{this.[0]~}}: yup.{{~frameYupSchema this.[1]~}},
+  {{/each}}
+});
+export const GET = withValidation(
+  { searchParamsSchema: searchParamsSchemaOfGet },
+  async function (request: NextRequest, context: NextContext) {
+    const { page, pageSize, ...rest } = searchParamsSchemaOfGet.cast(objectify(request.nextUrl.searchParams));
+    try {
+      const { total, data } = await query($table, rest, page, pageSize);
+      {{#unless (isNilorEmpty foreigns)}}
+
+      await Promise.all(
+        data.map(async (record: {{upperCamelCase entityName}}) => {
+          return Promise.all([
+            {{#each foreigns}}
+            await record.load{{upperCamelCase (nameForignField this.[0] this.[1].fieldName)}}(),
+            {{/each}}
+          ])
+        })
+      );
+      {{/unless}}
+
+      return NextResponse.json({
+        code: 0,
+        data: {
+          total,
+          data,
+        }
+      });
+    }
+    catch(e) {
+      return NextResponse.json({
+        code: 1,
+        error: e,
+        message: e.message,
+      });
+    }
+  }
+);
+
+const searchParamsSchemaOfDelete = yup.object({
+  {{#unless (isNilorEmpty (getPrimaryField fields))}}
+  {{#with (getPrimaryField fields)}}
+  {{this.[0]}}s: yup.array().of(yup.{{frameYupSchema this.[1]}}),
+  {{/with}}
+  {{/unless}}
+  {{#each fields}}
+  {{this.[0]~}}: yup.{{frameYupSchema this.[1]}},
+  {{/each}}
+});
+export const DELETE = withValidation(
+  { searchParamsSchema: searchParamsSchemaOfDelete },
+  async function (request: NextRequest, context: NextContext) {
+    const { {{#unless (isNilorEmpty (getPrimaryField fields))}}{{#with (getPrimaryField fields)}}{{this.[0]}}s, {{/with}}{{/unless}}...rest } = searchParamsSchemaOfDelete.cast(objectify(request.nextUrl.searchParams));
+
+    try {
+      await db.transaction("rw", $table, async () => {
+        {{#unless (isNilorEmpty (getPrimaryField fields))}}{{#with (getPrimaryField fields)~}}
+        if ({{this.[0]}}s && {{this.[0]}}s.length) {
+          await $table.bulkDelete({{this.[0]}}s);
+        }
+        else {
+          const { total, data } = await query($table, rest);
+          await Promise.all(data.map(async (target) => {
+            return $table.filter((record) => {
+              return isEqual(record, target);
+            }).delete();
+          }));
+        }
+        {{/with}}
+        {{~else~}}
+        const { total, data } = await query($table, rest);
+        await Promise.all(data.map(async (target) => {
+          return $table.filter((record) => {
+            return isEqual(record, target);
+          }).delete();
+        }));
+        {{/unless}}
+      });
+      return NextResponse.json({code: 0});
+    }
+    catch(e) {
+      return NextResponse.json({
+        code: 1,
+        error: e,
+        message: e.message,
+      });
+    }
+  }
+);
+
+const bodySchemaOfPost = yup.object({
+  {{#each fields}}
+  {{this.[0]~}}: yup.{{frameYupSchema this.[1]}},
+  {{/each}}
+});
+export const POST = withValidation(
+  { bodySchema: bodySchemaOfPost },
+  async function (request: NextRequest, context: NextContext) {
+    const data = bodySchemaOfPost.cast(await request.json());
+
+    try {
+      $table.add({...data});
+      return NextResponse.json({code: 0});
+    }
+    catch(e) {
+      return NextResponse.json({
+        code: 1,
+        error: e,
+        message: e.message,
+      });
+    }
+  }
+);

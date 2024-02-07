@@ -28,26 +28,32 @@ cli.option('--mock-adapter [mockAdapter]', 'The import statement path of mock ad
   default: "./utils/mockAdapter",
 })
 cli.option('--source, -s [folder]', 'The app folder path', {
-  default: './src/db/metadata.toml',
+  default: './src/metadata.toml',
 })
-cli.option('--output, -o [file]', 'The router file path', {
+cli.option('--db-output [file]', 'The router file path', {
   default: './src/db',
+})
+cli.option('--route-handlers-output [file]', 'The router file path', {
+  default: './src/app/api',
 })
 
 const parsed = cli.parse()
 if (!parsed.options.h && !parsed.options.v) {
-  const sourcePath = isAbsolute(cli.options.source) ? cli.options.source : join(process.cwd(), cli.options.source)
-  const outputPath = isAbsolute(cli.options.output) ? cli.options.output : join(process.cwd(), cli.options.output)
+  const sourcePath = isAbsolute(parsed.options.source) ? parsed.options.source : join(process.cwd(), parsed.options.source);
+  const dbOutputPath = isAbsolute(parsed.options.dbOutput) ? parsed.options.dbOutput : join(process.cwd(), parsed.options.dbOutput);
+  const routeHandlersOutputPath = isAbsolute(parsed.options.routeHandlersOutput) ? parsed.options.routeHandlersOutput : join(process.cwd(), parsed.options.routeHandlersOutput);
+
 
   const main = async () => {
     createReadStream(join(sourcePath), 'utf8').pipe(concat(async function(data) {
       var metadata = toml.parse(data, { bigint: false });
       normalize(metadata);
       const entities = convertToEntries(metadata);
-      const code = generateCode(entities);
-      await Promise.all(Object.entries(code).map(([path, source]) => {
+      const {db, routeHandlers} = generateCode(entities);
+
+      await Promise.all(Object.entries(db).map(([path, source]) => {
         return new Promise((resolve, reject) => {
-          const fullPath = join(outputPath, path);
+          const fullPath = join(dbOutputPath, path);
           mkdir(dirname(fullPath), { recursive: true }, (err) => {
             if (!err) {
               writeFile(fullPath, source, "utf-8", (err) => {
@@ -60,7 +66,24 @@ if (!parsed.options.h && !parsed.options.v) {
               });
             }
           });
-          
+        })
+      }));
+
+      await Promise.all(Object.entries(routeHandlers).map(([path, source]) => {
+        return new Promise((resolve, reject) => {
+          const fullPath = join(routeHandlersOutputPath, path);
+          mkdir(dirname(fullPath), { recursive: true }, (err) => {
+            if (!err) {
+              writeFile(fullPath, source, "utf-8", (err) => {
+                if (err) {
+                  reject(err);
+                }
+                else {
+                  resolve();
+                }
+              });
+            }
+          });
         })
       }));
     }));

@@ -1,0 +1,82 @@
+import { type NextRequest, type NextContext, NextResponse, objectify, withValidation } from "@meta-ultra/app-router";
+import { query } from "@meta-ultra/dexie-utilities";
+import { isEqual } from "lodash-es";
+import dayjs from "dayjs";
+import * as yup from "yup";
+import { db, I{{~upperCamelCase entityName~}}TableName{{#unless (isNilorEmpty foreigns)}}, {{upperCamelCase entityName}}{{/unless}} } from "@/db";
+
+const $table = db[I{{~upperCamelCase entityName~}}TableName];
+
+const paramsSchemaOfGet = yup.object({
+  {{#each fields}}
+  {{this.[0]~}}: yup.{{~frameYupSchema this.[1]~}},
+  {{/each}}
+});
+export const GET = withValidation(
+  { paramsSchema: paramsSchemaOfGet },
+  async function (request: NextRequest, context: NextContext) {
+    const params = paramsSchemaOfGet.cast(context.params);
+
+    try {
+      const data = await $table.get(params){{#unless (isNilorEmpty foreigns)}} as {{upperCamelCase entityName}} | undefined{{/unless}};
+      {{#unless (isNilorEmpty foreigns)}}
+      if (data) {
+        await Promise.all(
+          data.map(async (record: {{upperCamelCase entityName}}) => {
+            return Promise.all([
+              {{#each foreigns}}
+              await record.load{{upperCamelCase (nameForignField this.[0] this.[1].fieldName)}}(),
+              {{/each}}
+            ])
+          })
+        );
+      }
+      {{/unless}}
+
+      return NextResponse.json({
+        code: 0,
+        data,
+      });
+    }
+    catch(e) {
+      return NextResponse.json({
+        code: 1,
+        error: e,
+        message: e.message,
+      });
+    }
+  }
+);
+
+const paramsSchemaOfPut = yup.object({
+  {{#each fields}}
+  {{this.[0]~}}: yup.{{~frameYupSchema this.[1]~}},
+  {{/each}}
+});
+const bodySchemaOfPut = yup.object({
+  {{#each fields}}
+  {{this.[0]~}}: yup.{{~frameYupSchema this.[1]~}},
+  {{/each}}
+});
+export const PUT = withValidation(
+  { 
+    paramsSchema: paramsSchemaOfPut, 
+    bodySchema: bodySchemaOfPut,
+  },
+  async function (request: NextRequest, context: NextContext) {
+    const params = paramsSchemaOfPut.cast(context.params);
+    const data = bodySchemaOfPut.cast(await request.json());
+
+    try {
+      await $table.update(params, data);
+      return NextResponse.json({ code: 0 });
+    }
+    catch(e) {
+      return NextResponse.json({
+        code: 1,
+        error: e,
+        message: e.message,
+      });
+    }
+  }
+);

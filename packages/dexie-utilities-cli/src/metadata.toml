@@ -18,12 +18,12 @@ ref-text = "dict.({name: 'political_status'}).text"
 required = true
 [villager.representative]
 title = "村民代表"
-type = "number"
+type = "integer"
 values = {0 = "否", 1 = "是"}
 required = true
 [villager.examine_required]
 title = "参与考核"
-type = "number"
+type = "integer"
 values = {0 = "否", 1 = "是"}
 required = true
 [villager.address]
