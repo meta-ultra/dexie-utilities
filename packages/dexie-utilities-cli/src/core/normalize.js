@@ -1,4 +1,4 @@
-const { trim } = require("lodash");
+const { trim, groupBy } = require("lodash");
 
 const TABLE_NAME_RE = /^[a-z][0-9a-z_-]*$/i;
 const FIELD_NAME_RE = /^[a-z][0-9a-z_-]*$/i;
@@ -30,7 +30,7 @@ function normalizeFieldType(field) {
   }
 }
 
-function resolveReference(metadata, tableName, fieldName) {
+function resolveReference(metadata, tableName, fieldName, condition, sTableName, sFieldName) {
   const table = metadata[tableName];
   if (!table) return;
   const field = table[fieldName];
@@ -40,7 +40,7 @@ function resolveReference(metadata, tableName, fieldName) {
   let ref = trim(field.ref || "");
   if (ref) {
     const [foreignTableName, condition, foreignFieldName] = ref.split(".");
-    const foreignField = resolveReference(metadata, foreignTableName, foreignFieldName ? foreignFieldName : condition);
+    const foreignField = resolveReference(metadata, foreignTableName, foreignFieldName ? foreignFieldName : condition, foreignFieldName ? condition : undefined , tableName, fieldName);
 
     field.type = foreignField.type;
     foreigns.push([fieldName, {
@@ -50,6 +50,15 @@ function resolveReference(metadata, tableName, fieldName) {
     }]);
   }
   else {
+    if (metadata[sTableName]) {
+      const many = metadata[tableName]["$many"] = metadata[tableName]["$many"] || [];
+      many.push([fieldName, {
+        entityName: sTableName,
+        fieldName: sFieldName,
+        manyCondition: condition,
+      }]);
+    }
+    
     return field;
   }
 }

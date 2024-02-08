@@ -1,51 +1,51 @@
-[villager]
-id.type = "number"
-id.auto-increment = true
-branchId.ref = "branch.id"
-groupId.ref = "group.id"
-[villager.name]
-title = "姓名"
-type = "string"
-required = true
-[villager.phone]
-title = "手机号码"
-type = "string"
-format = "^1((34[0-8])|(8\\d{2})|(([0-35-9]|4|66|7|9)\\d{1}))\\d{7}$"
-[villager.political_status]
-title = "政治身份"
-ref = "dict.({name: 'political_status'}).value"
-ref-text = "dict.({name: 'political_status'}).text"
-required = true
-[villager.representative]
-title = "村民代表"
-type = "integer"
-values = {0 = "否", 1 = "是"}
-required = true
-[villager.examine_required]
-title = "参与考核"
-type = "integer"
-values = {0 = "否", 1 = "是"}
-required = true
-[villager.address]
-title = "地址"
-type = "string"
-indexed = false
+# [villager]
+# id.type = "number"
+# id.auto-increment = true
+# branchId.ref = "branch.id"
+# groupId.ref = "group.id"
+# [villager.name]
+# title = "姓名"
+# type = "string"
+# required = true
+# [villager.phone]
+# title = "手机号码"
+# type = "string"
+# format = "^1((34[0-8])|(8\\d{2})|(([0-35-9]|4|66|7|9)\\d{1}))\\d{7}$"
+# [villager.political_status]
+# title = "政治身份"
+# ref = "dict.({name: 'political_status'}).value"
+# ref-text = "dict.({name: 'political_status'}).text"
+# required = true
+# [villager.representative]
+# title = "村民代表"
+# type = "integer"
+# values = {0 = "否", 1 = "是"}
+# required = true
+# [villager.examine_required]
+# title = "参与考核"
+# type = "integer"
+# values = {0 = "否", 1 = "是"}
+# required = true
+# [villager.address]
+# title = "地址"
+# type = "string"
+# indexed = false
 
-[dict]
-id.type = "number"
-id.auto-increment = true
-[dict.type]
-title = "类型"
-type = "string"
-required = true
-[dict.text]
-title = "名称"
-type = "string"
-required = true
-[dict.value]
-title = "值"
-type = "string"
-required = true
+# [dict]
+# id.type = "number"
+# id.auto-increment = true
+# [dict.type]
+# title = "类型"
+# type = "string"
+# required = true
+# [dict.text]
+# title = "名称"
+# type = "string"
+# required = true
+# [dict.value]
+# title = "值"
+# type = "string"
+# required = true
 
 [branch]
 id.type = "number"
@@ -62,47 +62,47 @@ name.title = "名称"
 name.type = "string"
 name.required = true
 
-[volunteer-service]
-id.type = "number"
-id.auto-increment = true
-[volunteer-service.start_time]
-title = "开始时间"
-type = "datetime"
-required = true
-[volunteer-service.start_time."$ui"]
-format = "YYYY/MM/DD HH:mm:ss"
-[volunteer-service.end_time]
-title = "结束时间"
-type = "datetime"
-required = true
-[volunteer-service.end_time."$ui"]
-format = "YYYY/MM/DD HH:mm:ss"
-[volunteer-service.score]
-title = "分数"
-type = "number"
-precision = 0
-min = 0
-max = 10
+# [volunteer-service]
+# id.type = "number"
+# id.auto-increment = true
+# [volunteer-service.start_time]
+# title = "开始时间"
+# type = "datetime"
+# required = true
+# [volunteer-service.start_time."$ui"]
+# format = "YYYY/MM/DD HH:mm:ss"
+# [volunteer-service.end_time]
+# title = "结束时间"
+# type = "datetime"
+# required = true
+# [volunteer-service.end_time."$ui"]
+# format = "YYYY/MM/DD HH:mm:ss"
+# [volunteer-service.score]
+# title = "分数"
+# type = "number"
+# precision = 0
+# min = 0
+# max = 10
 
-[domicile]
-id.type = "number"
-id.auto-increment = true
-branchId.ref = "branch.id"
-groupId.ref = "group.id"
-name.title = "名称"
-name.type = "string"
-name.required = true
+# [domicile]
+# id.type = "number"
+# id.auto-increment = true
+# branchId.ref = "branch.id"
+# groupId.ref = "group.id"
+# name.title = "名称"
+# name.type = "string"
+# name.required = true
 
-[domicile-visit]
-id.type = "number"
-id.auto-increment = true
-domicileId.ref = "domicile.id"
-domicileId.required = true
-villagerId.ref = "villager.id"
-villagerId.required = true
-visit_time.title = "走访时间"
-visit_time.type = "date"
-visit_time.format = "YYYY/MM/DD HH:mm:ss"
-visit_time.required = true
-remark.title = "村民反馈"
-remark.type = "string"
+# [domicile-visit]
+# id.type = "number"
+# id.auto-increment = true
+# domicileId.ref = "domicile.id"
+# domicileId.required = true
+# villagerId.ref = "villager.id"
+# villagerId.required = true
+# visit_time.title = "走访时间"
+# visit_time.type = "date"
+# visit_time.format = "YYYY/MM/DD HH:mm:ss"
+# visit_time.required = true
+# remark.title = "村民反馈"
+# remark.type = "string"

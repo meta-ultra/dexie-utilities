@@ -18,7 +18,16 @@ Handlebars.registerHelper("join", (array, sep) => array.join(sep));
 Handlebars.registerHelper("isNil", (value) => value === undefined || value === null);
 Handlebars.registerHelper(
   "isNilorEmpty",
-  (value) => value === undefined || value === null || !value.length
+  (...args) => {
+    const values = args.slice(0, args.length - 1);
+    let result = true;
+    for (let i = 0; result && i < values.length; ++i) {
+      const value = values[i];
+      result = result && (value === undefined || value === null || !value.length);
+    }
+
+    return result;
+  }
 );
 Handlebars.registerHelper("lowerCase", (value) => isString(value) ? lowerCase(value) : value);
 Handlebars.registerHelper("frameYupSchema", (field, strict) => {
@@ -127,6 +136,26 @@ Handlebars.registerHelper(
     return camelCase(fieldName.replace(RegExp(foreignFieldName + "$", "i"), ""));
   }
 );
+Handlebars.registerHelper(
+  "nameManyField",
+  (fieldName) => {
+    return pluralize(camelCase(fieldName));
+  }
+);
+Handlebars.registerHelper(
+  "getEntityNameOfForeigns",
+  (foreigns, many) => {
+    const entityNames = new Set();
+    for (const foreign of foreigns) {
+      entityNames.add(foreign[1].entityName);
+    }
+    for (const one of many) {
+      entityNames.add(one[1].entityName);
+    }
+
+    return Array.from(entityNames);
+  }
+);
 /* End of Register Helpers */
 
 /* Partials on fly */
@@ -151,10 +180,10 @@ const generateDBCode = (entities) => {
     "db.ts": generateCodeOnFly("../templates/db/DB.hbs", {entities}),
     "index.ts": generateCodeOnFly("../templates/db/DBIndex.hbs", {entities}),
   };
-  for (const [entityName, fields, foreigns] of entities) {
+  for (const [entityName, fields, foreigns, many] of entities) {
     code[`entities/I${upperFirst(camelCase(entityName))}/index.ts`] = generateCodeOnFly("../templates/db/EntityIndex.hbs", {entityName, fields, foreigns});
     code[`entities/I${upperFirst(camelCase(entityName))}/I${upperFirst(camelCase(entityName))}.ts`] = generateCodeOnFly("../templates/db/IEntity.hbs", {entityName, fields, foreigns});
-    code[`entities/I${upperFirst(camelCase(entityName))}/${upperFirst(camelCase(entityName))}.ts`] = generateCodeOnFly("../templates/db/Entity.hbs", {entityName, fields, foreigns});
+    code[`entities/I${upperFirst(camelCase(entityName))}/${upperFirst(camelCase(entityName))}.ts`] = generateCodeOnFly("../templates/db/Entity.hbs", {entityName, fields, foreigns, many});
     code[`entities/I${upperFirst(camelCase(entityName))}/I${upperFirst(camelCase(entityName))}Populator.ts`] = generateCodeOnFly("../templates/db/EntityPopulator.hbs", {entityName, fields, foreigns});
   }
 
@@ -163,8 +192,8 @@ const generateDBCode = (entities) => {
 
 const generateRouteHandlerCode = (entities, databasePackage) => {
   const code = {};
-  for (const [entityName, fields, foreigns] of entities) {
-    code[`${pluralize(kebabCase(entityName))}/route.ts`] = generateCodeOnFly("../templates/route-handlers/Route.hbs", {entityName, fields, foreigns, databasePackage});
+  for (const [entityName, fields, foreigns, many] of entities) {
+    code[`${pluralize(kebabCase(entityName))}/route.ts`] = generateCodeOnFly("../templates/route-handlers/Route.hbs", {entityName, fields, foreigns, databasePackage, many});
     code[`${pluralize(kebabCase(entityName))}/[id]/route.ts`] = generateCodeOnFly("../templates/route-handlers/Route[id].hbs", {entityName, fields, foreigns, databasePackage});
   }
 
