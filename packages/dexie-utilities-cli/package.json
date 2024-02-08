@@ -1,15 +1,14 @@
 {
-  "name": "@meta-ultra/app-router-cli",
-  "version": "1.0.0",
-  "description": "A program for generating router configuration abiding by Next.js App Router.",
+  "name": "@meta-ultra/dexie-utilities-cli",
+  "version": "0.1.0",
   "author": "John Huang <fsjohnhuang@hotmail.com>",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git@github.com:meta-ultra/app-router.git"
+    "url": "git@github.com:meta-ultra/dexie-utilities.git"
   },
-  "bugs": "https://github.com/meta-ultra/app-router/issues",
-  "homepage": "https://github.com/meta-ultra/app-router/tree/main/packages/app-router-cli",
+  "bugs": "https://github.com/meta-ultra/dexie-utilities/issues",
+  "homepage": "https://github.com/meta-ultra/dexie-utilities/tree/main/packages/dexie-utilities-cli",
   "engines": {
     "node": ">=12.0.0"
   },
@@ -26,10 +25,7 @@
     "registry": "https://registry.npmjs.org/"
   },
   "scripts": {
-    "dev": "node ./src/cli-wrapper.js",
-    "precompile": "node ./scripts/precompile.js",
-    "build": "rimraf ./dist && node ./scripts/precompile.js && node ./scripts/build.js",
-    "test": "jest"
+    "dev": "node ./src/cli-wrapper.js"
   },
   "keywords": [
     "dexie",
