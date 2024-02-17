@@ -1,0 +1,44 @@
+import { type ReactNode, useEffect } from 'react';
+import { type FormInstance, Form, Row, Col, Input, Select } from "antd";
+import { isArray, isNumber } "lodash-es";
+import { useSuspenseQuery } from "@tanstack/react-query";
+import $axios from "@/utils/$axios";
+
+export default function useQueryForm(queries?: Record<string, any>): [ReactNode, FormInstance<any>] {
+  const [form] = Form.useForm();
+  {{#each foreigns}}
+  const {{pluralizeLowerCamelCase this.[1].entityName}} = useSuspenseQuery({
+    queryKey: [`/{{pluralizeKebabCase this.[1].entityName}}`, {{this.[1].condition}}],
+    async queryFn({queryKey}) {
+      const res = await $axios.get(queryKey[0] as string, {params: queryKey[1] || {}});
+      if (isArray(res)) {
+        return res;
+      }
+      else if (isNumber(res.total) && isArray(res.data)) {
+        return res.data;
+      }
+    }
+  });
+  {{/each}}
+
+  const component = (
+    <Form form={form}>
+      <Row gutter={16}>
+        {{#each fields}}
+        {{#unless (isNilorEmpty this.[1].$ui.title)}}
+        <Col span={6}>
+          <Form.Item label={"{{this.[1].$ui.title}}"} name={"{{this.[0]}}"}>
+            {{getControls this}}
+          </Form.Item>
+        </Col>
+        {{/unless}}
+        {{/each}}
+      </Row>
+    </Form>
+  );
+  useEffect(() => {
+    form.setFieldsValue(queries);
+  }, []);
+
+  return [component, form];
+}

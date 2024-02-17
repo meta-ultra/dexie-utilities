@@ -33,7 +33,7 @@ export const GET = withValidation(
             await record.load{{~upperCamelCase (nameForignField this.[0] this.[1].fieldName)~}}(),
             {{/each}}
             {{#each many}}
-            await record.load{{~upperCamelCase (nameManyField this.[1].entityName)~}}(),
+            await record.load{{~upperCamelCase (pluralizeLowerCamelCase this.[1].entityName)~}}(),
             {{/each}}
           ])
         })

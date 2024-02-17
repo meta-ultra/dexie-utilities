@@ -40,6 +40,9 @@ cli.option('--db-package [file]', 'The router file path', {
 cli.option('--route-handlers-output [file]', 'The router file path', {
   default: './src/app/api',
 });
+cli.option('--ui-output [file]', 'The router file path', {
+  default: './src/app',
+});
 
 const parsed = cli.parse()
 if (!parsed.options.h && !parsed.options.v) {
@@ -47,6 +50,7 @@ if (!parsed.options.h && !parsed.options.v) {
   const sourcePath = isAbsolute(parsed.options.source) ? parsed.options.source : join(process.cwd(), parsed.options.source);
   const dbOutputPath = isAbsolute(parsed.options.dbOutput) ? parsed.options.dbOutput : join(process.cwd(), parsed.options.dbOutput);
   const routeHandlersOutputPath = isAbsolute(parsed.options.routeHandlersOutput) ? parsed.options.routeHandlersOutput : join(process.cwd(), parsed.options.routeHandlersOutput);
+  const uiOutputPath = isAbsolute(parsed.options.uiOutput) ? parsed.options.uiOutput : join(process.cwd(), parsed.options.uiOutput);
   const databasePackage =  parsed.options.dbPackage || "@/db";
 
   const main = async () => {
@@ -58,7 +62,7 @@ if (!parsed.options.h && !parsed.options.v) {
         const re = RegExp(filter);
         entities = entities.filter(([entityName]) => re.test(entityName));
       }
-      const {db, routeHandlers} = generateCode(entities, databasePackage);
+      const {db, routeHandlers, ui} = generateCode(entities, databasePackage);
 
       await Promise.all(Object.entries(db).map(([path, source]) => {
         return new Promise((resolve, reject) => {
@@ -81,6 +85,24 @@ if (!parsed.options.h && !parsed.options.v) {
       await Promise.all(Object.entries(routeHandlers).map(([path, source]) => {
         return new Promise((resolve, reject) => {
           const fullPath = join(routeHandlersOutputPath, path);
+          mkdir(dirname(fullPath), { recursive: true }, (err) => {
+            if (!err) {
+              writeFile(fullPath, source, "utf-8", (err) => {
+                if (err) {
+                  reject(err);
+                }
+                else {
+                  resolve();
+                }
+              });
+            }
+          });
+        })
+      }));
+
+      await Promise.all(Object.entries(ui).map(([path, source]) => {
+        return new Promise((resolve, reject) => {
+          const fullPath = join(uiOutputPath, path);
           mkdir(dirname(fullPath), { recursive: true }, (err) => {
             if (!err) {
               writeFile(fullPath, source, "utf-8", (err) => {

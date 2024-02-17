@@ -17,7 +17,7 @@ export class {{upperCamelCase entityName}} implements I{{~upperCamelCase entityN
   {{nameForignField this.[0] this.[1].fieldName~}}?: {{upperCamelCase this.[1].entityName~}};
 {{/each}}
 {{#each many}}
-  {{nameManyField this.[1].entityName~}}?: {{upperCamelCase this.[1].entityName~}}[];
+  {{pluralizeLowerCamelCase this.[1].entityName~}}?: {{upperCamelCase this.[1].entityName~}}[];
 {{/each}}
 
   constructor({{#each (sortByRequiredFirst fields)}}{{#if @index}}, {{/if}}{{this.[0]}}{{#unless this.[1].required}}?{{/unless}}: {{this.[1].type}}{{/each}}) {
@@ -49,14 +49,14 @@ export class {{upperCamelCase entityName}} implements I{{~upperCamelCase entityN
   {{/each}}
   {{#each many}}
 
-  async load{{~upperCamelCase (nameManyField this.[1].entityName)~}}() {
+  async load{{~upperCamelCase (pluralizeLowerCamelCase this.[1].entityName)~}}() {
     {{#unless (isNilorEmpty this.[1].manyCondition)}}
     if (!isEqual(pick(this, Object.keys({{{this.[1].manyCondition}}})), {{{this.[1].manyCondition}}})) {
-      this.{{~nameManyField this.[1].entityName}} = [];
+      this.{{~pluralizeLowerCamelCase this.[1].entityName}} = [];
     }
     {{/unless}}
 
-    this.{{~nameManyField this.[1].entityName}} = await db[I{{~upperCamelCase this.[1].entityName~}}TableName].filter((record) => {
+    this.{{~pluralizeLowerCamelCase this.[1].entityName}} = await db[I{{~upperCamelCase this.[1].entityName~}}TableName].filter((record) => {
       return record.{{this.[1].fieldName}} === this.{{~this.[0]~}};
     }).toArray();
   }

@@ -48,6 +48,8 @@
 # required = true
 
 [branch]
+title = "分支"
+[branch.fields]
 id.type = "number"
 id.auto-increment = true
 name.title = "名称"
@@ -55,9 +57,12 @@ name.type = "string"
 name.required = true
 
 [group]
+title = "小组"
+[group.fields]
 id.type = "number"
 id.auto-increment = true
 branchId.ref = "branch.id"
+branchId."$ui".label = "branch.name"
 name.title = "名称"
 name.type = "string"
 name.required = true

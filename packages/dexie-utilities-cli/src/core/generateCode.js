@@ -137,9 +137,15 @@ Handlebars.registerHelper(
   }
 );
 Handlebars.registerHelper(
-  "nameManyField",
+  "pluralizeLowerCamelCase",
   (fieldName) => {
     return pluralize(camelCase(fieldName));
+  }
+);
+Handlebars.registerHelper(
+  "pluralizeKebabCase",
+  (fieldName) => {
+    return pluralize(kebabCase(fieldName));
   }
 );
 Handlebars.registerHelper(
@@ -154,6 +160,27 @@ Handlebars.registerHelper(
     }
 
     return Array.from(entityNames);
+  }
+);
+Handlebars.registerHelper(
+  "getControls",
+  (entity) => {
+    const [entityName, entityCofig] = entity;
+    let controls = "";
+    if (/^Input$/i.test(entityCofig["$ui"].controls)) {
+      controls = `<Input />`;
+    }
+    else if (/^InputNumber$/i.test(entityCofig["$ui"].controls)) {
+      controls = `<InputNumber min={${entityCofig["$ui"].min}} max={${entityCofig["$ui"].max}} precision={${entityCofig["$ui"].precision}} />`;
+    }
+    else if (/^DatePicker$/i.test(entityCofig["$ui"].controls)) {
+      controls = `<DatePicker />`;
+    }
+    else if (/^Select$/i.test(entityCofig["$ui"].controls)) {
+      controls = `<Select>{${pluralize(entityCofig["$ui"].dataSource)} && ${pluralize(entityCofig["$ui"].dataSource)}.map((${entityCofig["$ui"].dataSource}) => (<Select.Option key={${entityCofig["$ui"].value}} value={${entityCofig["$ui"].value}}>{${entityCofig["$ui"].label}}</Select.Option>))}</Select>`;
+    }
+
+    return new Handlebars.SafeString(controls);
   }
 );
 /* End of Register Helpers */
@@ -200,11 +227,24 @@ const generateRouteHandlerCode = (entities, databasePackage) => {
   return code;
 }
 
+const generateUICode = (entities) => {
+  const code = {};
+  for (const [entityName, fields, foreigns, many] of entities) {
+    console.log(foreigns)
+    code[`${pluralize(kebabCase(entityName))}/layout.tsx`] = generateCodeOnFly("../templates/ui/Layout.hbs", {entityName, fields, foreigns, many});
+    code[`${pluralize(kebabCase(entityName))}/useQueryForm.tsx`] = generateCodeOnFly("../templates/ui/useQueryForm.hbs", {entityName, fields, foreigns, many});
+    code[`${pluralize(kebabCase(entityName))}/delete/page.tsx`] = generateCodeOnFly("../templates/ui/DeletePage.hbs", {entityName, fields, foreigns, many});
+  }
+
+  return code;
+}
+
 const generateCode = (entities, databasePackage) => {
   const db = generateDBCode(entities);
   const routeHandlers = generateRouteHandlerCode(entities, databasePackage);
+  const ui = generateUICode(entities);
 
-  return {db, routeHandlers};
+  return {db, routeHandlers, ui};
 }
 
 module.exports = {
