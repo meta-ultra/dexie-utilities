@@ -1,4 +1,5 @@
 const { trim, isNumber } = require("lodash");
+const { tokenizeReference } = require("./utils.js");
 
 const TABLE_NAME_RE = /^[a-z][0-9a-z_-]*$/i;
 const FIELD_NAME_RE = /^[a-z][0-9a-z_-]*$/i;
@@ -39,8 +40,8 @@ function resolveReference(metadata, tableName, fieldName, condition, sTableName,
   const foreigns = metadata[tableName]["$foreigns"] = metadata[tableName]["$foreigns"] || [];
   let ref = trim(field.ref || "");
   if (ref) {
-    const [foreignTableName, condition, foreignFieldName] = ref.split(".");
-    const foreignField = resolveReference(metadata, foreignTableName, foreignFieldName ? foreignFieldName : condition, foreignFieldName ? condition : undefined , tableName, fieldName);
+    const [foreignTableName, condition, foreignFieldName] = tokenizeReference(ref);
+    const foreignField = resolveReference(metadata, foreignTableName, foreignFieldName , condition, tableName, fieldName);
 
     field.type = foreignField.type;
     foreigns.push([fieldName, {
@@ -70,12 +71,12 @@ function normalizeUIProps(field, metdata) {
   field["$ui"].required = field["$ui"].required || field.required;
 
   if (field.ref) {
-    const foreignTableName = field.ref.split(".")[0];
+    const [foreignTableName, condition, foreignFieldName] = tokenizeReference(field.ref);
     field["$ui"].title = field["$ui"].title || metdata[foreignTableName].title;
     field["$ui"].controls = field["$ui"].controls || "Select";
     field["$ui"].dataSource = field["$ui"].dataSource || foreignTableName;
-    field["$ui"].value = field["$ui"].value || field.ref;
-    field["$ui"].label = field["$ui"].label || field.ref;
+    field["$ui"].value = field["$ui"].value || [foreignTableName, foreignFieldName].join(".");
+    field["$ui"].label = field["$ui"].label || [foreignTableName, foreignFieldName].join(".");
   }
   else if (field.type === "Date") {
     field["$ui"].controls = field["$ui"].controls || "DatePicker";

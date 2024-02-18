@@ -8,14 +8,7 @@ function convertToEntries(metadata) {
     const fields = metadata[tableName].fields || {};
     const fieldNames = Object.keys(fields);
     for (const fieldName of fieldNames) {
-      // if (fieldName === "$foreigns") {
-      //   foreigns = fields[fieldName];
-      // }
-      // else if (fieldName === "$many") {
-      //   many = fields[fieldName];
-      // } else {
-        fieldEntities.push([fieldName, fields[fieldName]]);
-      // }
+      fieldEntities.push([fieldName, fields[fieldName]]);
     }
     tableEntities.push([tableName, fieldEntities, foreigns, many]);
   }

@@ -25,7 +25,7 @@ export class Group implements IGroup {
     if (this.branchId !== undefined) {
       const record = await db[IBranchTableName].get({
         "id": this.branchId,
-      });
+...( || {}),      });
       if (record) {
         this.branch = record as Branch;
       }

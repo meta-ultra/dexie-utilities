@@ -163,21 +163,21 @@ Handlebars.registerHelper(
   }
 );
 Handlebars.registerHelper(
-  "getControls",
+  "getQueryFormControls",
   (entity) => {
     const [entityName, entityCofig] = entity;
     let controls = "";
     if (/^Input$/i.test(entityCofig["$ui"].controls)) {
-      controls = `<Input />`;
+      controls = `<Input allowClear/>`;
     }
     else if (/^InputNumber$/i.test(entityCofig["$ui"].controls)) {
-      controls = `<InputNumber min={${entityCofig["$ui"].min}} max={${entityCofig["$ui"].max}} precision={${entityCofig["$ui"].precision}} />`;
+      controls = `<InputNumber allowClear min={${entityCofig["$ui"].min}} max={${entityCofig["$ui"].max}} precision={${entityCofig["$ui"].precision}} />`;
     }
     else if (/^DatePicker$/i.test(entityCofig["$ui"].controls)) {
       controls = `<DatePicker />`;
     }
     else if (/^Select$/i.test(entityCofig["$ui"].controls)) {
-      controls = `<Select>{${pluralize(entityCofig["$ui"].dataSource)} && ${pluralize(entityCofig["$ui"].dataSource)}.map((${entityCofig["$ui"].dataSource}) => (<Select.Option key={${entityCofig["$ui"].value}} value={${entityCofig["$ui"].value}}>{${entityCofig["$ui"].label}}</Select.Option>))}</Select>`;
+      controls = `<Select allowClear  showSearch filterOption={(input, option) => !!(option && option.children && option.children.indexOf(input as any) !== -1)}>{${pluralize(entityCofig["$ui"].dataSource)} && ${pluralize(entityCofig["$ui"].dataSource)}.map((${entityCofig["$ui"].dataSource}) => (<Select.Option key={${entityCofig["$ui"].value}} value={${entityCofig["$ui"].value}}>{${entityCofig["$ui"].label}}</Select.Option>))}</Select>`;
     }
 
     return new Handlebars.SafeString(controls);
@@ -230,7 +230,6 @@ const generateRouteHandlerCode = (entities, databasePackage) => {
 const generateUICode = (entities) => {
   const code = {};
   for (const [entityName, fields, foreigns, many] of entities) {
-    console.log(foreigns)
     code[`${pluralize(kebabCase(entityName))}/layout.tsx`] = generateCodeOnFly("../templates/ui/Layout.hbs", {entityName, fields, foreigns, many});
     code[`${pluralize(kebabCase(entityName))}/useQueryForm.tsx`] = generateCodeOnFly("../templates/ui/useQueryForm.hbs", {entityName, fields, foreigns, many});
     code[`${pluralize(kebabCase(entityName))}/delete/page.tsx`] = generateCodeOnFly("../templates/ui/DeletePage.hbs", {entityName, fields, foreigns, many});
