@@ -1,6 +1,6 @@
 import dayjs from "dayjs";
 import { type Table } from "dexie";
-import { get, isString, isNumber, isNil } from "lodash-es";
+import { get, isString, isNumber, isNil, isArray } from "lodash-es";
 import { getQueryParams, groupQueryKeys, getNestedValue } from "./utils";
 
 const defaultFilter = (queryKey: string | undefined, value: any, queryValue: any): boolean => {
@@ -26,6 +26,16 @@ const defaultFilter = (queryKey: string | undefined, value: any, queryValue: any
   }
   else if (isNil(value)) {
     return isNil(queryValue) || queryValue === "";
+  }
+  else if (isArray(queryValue)) {
+    return !!queryValue.find((x: any) => {
+      if (isString(value)) {
+        return (value ?? "").indexOf(x) !== -1;
+      }
+      else {
+        return value === x;
+      }
+    });
   }
   else {
     return value === queryValue;
