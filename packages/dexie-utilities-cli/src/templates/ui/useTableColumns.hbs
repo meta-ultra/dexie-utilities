@@ -1,72 +1,37 @@
 import { useMemo } from 'react';
 import { Space } from "antd";
 import { useNavigate } from 'react-router-dom';
-{{#unless (isNilorEmpty foreigns)}}
-import { isArray, isNumber } from "lodash-es";
-import { useSuspenseQuery } from "@tanstack/react-query";
-import $axios from "@/utils/$axios";
-{{/unless }}
+import { AiOutlineEdit, AiOutlineDelete } from "react-icons/ai";
 
 export default function useTableColumns() {
   const navigate = useNavigate();
-  {{#each foreigns}}
-  const {data: {{pluralizeLowerCamelCase this.[1].entityName~}} } = useSuspenseQuery({
-    queryKey: [`/api/{{pluralizeKebabCase this.[1].entityName}}`, {{{this.[1].condition}}}],
-    async queryFn({queryKey}) {
-      const res: {total: number, data: any[]} | any[] = await $axios.get(queryKey[0] as string, {params: queryKey[1] || {}});
-      if (isArray(res)) {
-        return res;
-      }
-      else if (isNumber(res.total) && isArray(res.data)) {
-        return res.data;
-      }
-    }
-  });
-  {{/each}}
 
   const columns = useMemo(() => {
     return [
       {{#each fields}}
-      { title: {{this.[1].$ui.title}}, dataIndex: {{this.[0]}}, key: {{this.[0]}}, sorter: {{this.[1].$ui.sorter}}, align: {{this.[1].$ui.align}}, width: {{this.[1].$ui.width}} },
+      {{#unless (isNilorEmpty this.[1].$ui.title)}}
+      { title: "{{this.[1].$ui.title}}", dataIndex: "{{this.[0]}}", key: "{{this.[0]}}", sorter: {{this.[1].$ui.columnSorter}}, align: "{{this.[1].$ui.columnAlign}}", width: {{this.[1].$ui.columnWidth}}, 
+        render(value: any, record: any) {
+        {{#unless (isNilorEmpty this.[1].ref)}}
+          return record["{{getForeignPropertyName this.[0]}}"]["{{getForeignFieldName this.[1].$ui.label}}"];
+        {{else}}
+          return value;
+        {{/unless}}
+        }
+      },
+      {{/unless}}
       {{/each}}
-      { title: "政治面貌", dataIndex: "political_status", key: "political_status",  align: "center", width: 200, render(value) {
-          if (dicts && dicts["political_status"] && dicts["political_status"].length) {
-            const dict = dicts["political_status"].find((dict: any) => dict.value === value);
-            if (dict) {
-              return dict.text;
-            }
-          }
-        }
-      },
-      { title: "村民代表", dataIndex: "representative", key: "representative",  align: "center", width: 200, render(value) {
-          if (dicts && dicts["representative"] && dicts["representative"].length) {
-            const dict = dicts["representative"].find((dict: any) => dict.value === value);
-            if (dict) {
-              return dict.text;
-            }
-          }
-        }
-      },
-      { title: "参与党员考核", dataIndex: "examine_required", key: "examine_required",  align: "center", width: 200, render(value) {
-          if (dicts && dicts["examine_required"] && dicts["examine_required"].length) {
-            const dict = dicts["examine_required"].find((dict: any) => dict.value === value);
-            if (dict) {
-              return dict.text;
-            }
-          }
-        }
-      },
-      { title: "所属支部", dataIndex: "branch", key: "branch",  align: "center", width: 200, render(value) { return value ? value.name : "-" }},
-      { key: "action", fixed: "right", width: 100, render(_: any, record: any) {
+
+      { key: "action", fixed: "right", width: 150, align: "center", render(_: any, record: any) {
         return (
           <Space size="middle">
-            <a onClick={() => navigate(`${record.id}/edit`)}>修 改</a>
-            <a onClick={() => navigate(`delete`, { state: {ids: [record.id]} })}>删 除</a>
+            <a onClick={() => navigate(`${record.id}/edit`)}><AiOutlineEdit className='inline-block relative -top-[2px]' size={16}/> 修 改</a>
+            <a onClick={() => navigate(`delete`, { state: {ids: [record.id]} })} className='!text-red-400 hover:!text-red-300'><AiOutlineDelete className='inline-block relative -top-[2px]' size={16}/>删 除</a>
           </Space>
         )
       }},
     ];
-  }, [navigate, dicts])
+  }, [navigate])
 
   return columns;
 }

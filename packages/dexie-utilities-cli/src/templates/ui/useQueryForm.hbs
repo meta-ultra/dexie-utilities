@@ -1,5 +1,5 @@
 import { type ReactNode, useEffect } from 'react';
-import { type FormInstance, Form, Row, Col{{#each fields}}{{#unless (isNilorEmpty this.[1].$ui.title)}}, {{this.[1].$ui.controls}}{{/unless}}{{/each}} } from "antd";
+import { type FormInstance, Form, Row, Col, {{getControlsNamedImports fields}} } from "antd";
 {{#unless (isNilorEmpty foreigns)}}
 import { isArray, isNumber } from "lodash-es";
 import { useSuspenseQuery } from "@tanstack/react-query";
@@ -9,7 +9,7 @@ import $axios from "@/utils/$axios";
 export default function useQueryForm(queries?: Record<string, any>): [ReactNode, FormInstance<any>] {
   const [form] = Form.useForm();
   {{#each foreigns}}
-  const {data: {{pluralizeLowerCamelCase this.[1].entityName~}} } = useSuspenseQuery({
+  const {data: {{getForeignPropertyName this.[0]~}} } = useSuspenseQuery({
     queryKey: [`/api/{{pluralizeKebabCase this.[1].entityName}}`, {{{this.[1].condition}}}],
     async queryFn({queryKey}) {
       const res: {total: number, data: any[]} | any[] = await $axios.get(queryKey[0] as string, {params: queryKey[1] || {}});

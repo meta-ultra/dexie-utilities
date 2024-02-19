@@ -1,0 +1,100 @@
+import { useEffect } from 'react'
+import { Button, Form, Row, Col, {{getControlsNamedImports fields}} } from "antd";
+import { useQueryClient, useMutation, useSuspenseQuery } from '@tanstack/react-query';
+import useEvent from 'react-use-event-hook';
+import { useRouteModalContext } from '@/components/RouteModal'
+import { usePopup } from '@/utils/PopupContext';
+import $axios from '@/utils/$axios';
+{{#unless (isNilorEmpty foreigns)}}
+import { isArray, isNumber } from "lodash-es";
+{{/unless }}
+
+export default function Page({params}: {params: {id: string}}) {
+  {{#each foreigns}}
+  const {data: {{getForeignPropertyName this.[0]~}} } = useSuspenseQuery({
+    queryKey: [`/api/{{pluralizeKebabCase this.[1].entityName}}`, {{{this.[1].condition}}}],
+    async queryFn({queryKey}) {
+      const res: {total: number, data: any[]} | any[] = await $axios.get(queryKey[0] as string, {params: queryKey[1] || {}});
+      if (isArray(res)) {
+        return res;
+      }
+      else if (isNumber(res.total) && isArray(res.data)) {
+        return res.data;
+      }
+    }
+  });
+  {{/each}}
+
+  const {data: record} = useSuspenseQuery({
+    queryKey: [`/api/{{pluralizeKebabCase entityName}}/${params.id}`],
+    queryFn({queryKey}) {
+      return $axios.get(queryKey[0] as string);
+    }
+  })
+
+  const context = useRouteModalContext();
+  const { message } = usePopup();
+  const [formRef] = Form.useForm();
+  const queryClient = useQueryClient();
+  const mutation = useMutation({
+    mutationFn() {
+      return $axios.put(`/api/{{pluralizeKebabCase entityName}}/${params.id}`, formRef.getFieldsValue());
+    }
+  });
+
+  const onConfirm = useEvent(async () => {
+    try {
+      await formRef.validateFields();
+
+      try {
+        await mutation.mutateAsync();
+        queryClient.invalidateQueries({ queryKey: [`/api/{{pluralizeKebabCase entityName}}`] });
+        context.navigateBack();
+        message.success("操作成功");
+      }
+      catch(e) {
+        message.error("操作失败: " + (e as Error).message);
+      }
+    }
+    catch(e) {
+      if (process.env.NODE_ENV !== "production") {
+        console.warn(e);
+      }
+    }
+  });
+
+  useEffect(() => {
+    if (context) {
+      context.setModalProps({
+        title: "修改信息",
+        width: "80%",
+        footer: [
+          <Button key="cancel" onClick={context.navigateBack}>取 消</Button>,
+          <Button key="confirm" loading={mutation.isPending} type='primary' onClick={onConfirm}>确 定</Button>,
+        ],
+      })
+    }
+  }, [mutation.isPending]);
+
+  useEffect(() => {
+    formRef.setFieldsValue(record);
+  }, [record]);
+
+  return (
+    <div>
+      <Form form={formRef}>
+        <Row gutter={16}>
+          {{#each fields}}
+        {{#unless (isNilorEmpty this.[1].$ui.title)}}
+        <Col span={6}>
+          <Form.Item label={"{{this.[1].$ui.title}}"} name={"{{this.[0]}}"} rules={[{required: {{this.[1].$ui.required~}} }]}>
+            {{getQueryFormControls this}}
+          </Form.Item>
+        </Col>
+        {{/unless}}
+        {{/each}}
+        </Row>
+      </Form>
+    </div>
+  )
+}

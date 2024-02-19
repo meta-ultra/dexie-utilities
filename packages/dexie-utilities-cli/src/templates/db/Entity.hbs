@@ -14,7 +14,7 @@ export class {{upperCamelCase entityName}} implements I{{~upperCamelCase entityN
 {{/each}}
 
 {{#each foreigns}}
-  {{nameForignField this.[0] this.[1].fieldName~}}?: {{upperCamelCase this.[1].entityName~}};
+  {{getForeignPropertyName this.[0]~}}?: {{upperCamelCase this.[1].entityName~}};
 {{/each}}
 {{#each many}}
   {{pluralizeLowerCamelCase this.[1].entityName~}}?: {{upperCamelCase this.[1].entityName~}}[];
@@ -33,16 +33,14 @@ export class {{upperCamelCase entityName}} implements I{{~upperCamelCase entityN
   }
   {{#each foreigns}}
 
-  async load{{~upperCamelCase (nameForignField this.[0] this.[1].fieldName)~}}() {
+  async load{{~upperCamelCase (getForeignPropertyName this.[0])~}}() {
     if (this.{{~this.[0]}} !== undefined) {
       const record = await db[I{{~upperCamelCase this.[1].entityName~}}TableName].get({
-        "{{~this.[1].fieldName~}}": this.{{~this.[0]~}},
-        {{#unless (isNil this.[1].condition)~}}
-        ...({{{this.[1].condition}}} || {}),
-        {{~/unless}}
+        "{{~this.[1].fieldName~}}": this.{{~this.[0]~}},{{#unless (isNilorEmpty this.[1].condition)}}
+        ...Object({{{this.[1].condition}}}),{{/unless}}
       });
       if (record) {
-        this.{{~nameForignField this.[0] this.[1].fieldName}} = record as {{upperCamelCase this.[1].entityName~}};
+        this.{{~getForeignPropertyName this.[0]}} = record as {{upperCamelCase this.[1].entityName~}};
       }
     }
   }
@@ -54,8 +52,8 @@ export class {{upperCamelCase entityName}} implements I{{~upperCamelCase entityN
     if (!isEqual(pick(this, Object.keys({{{this.[1].manyCondition}}})), {{{this.[1].manyCondition}}})) {
       this.{{~pluralizeLowerCamelCase this.[1].entityName}} = [];
     }
-    {{/unless}}
 
+    {{/unless}}
     this.{{~pluralizeLowerCamelCase this.[1].entityName}} = await db[I{{~upperCamelCase this.[1].entityName~}}TableName].filter((record) => {
       return record.{{this.[1].fieldName}} === this.{{~this.[0]~}};
     }).toArray();

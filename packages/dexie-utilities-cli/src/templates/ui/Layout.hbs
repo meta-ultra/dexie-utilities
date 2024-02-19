@@ -1,13 +1,13 @@
-import { ReactNode, useState,} from "react";
-import { Row, Col, Table, Button } from "antd";
-import { useQuery } from "@tanstack/react-query";
+import { type ReactNode, type Key, useState, useEffect, useMemo } from "react";
+import { Row, Col, Table, Button, Alert } from "antd";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import useEvent from "react-use-event-hook";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { IoSearch } from "react-icons/io5";
-import { IoMdAddCircleOutline } from "react-icons/io";
+import { IoMdAddCircleOutline, IoMdRemoveCircleOutline } from "react-icons/io";
 import { TbDatabaseExport, TbDatabaseImport } from "react-icons/tb";
 import { useCache } from "@meta-ultra/cache";
-import RouteModal from "./RouteModal";
+import { RouteModal } from '@/components/RouteModal'
 import $axios from "@/utils/$axios";
 import useTableColumns from "./useTableColumns";
 import useQueryForm from "./useQueryForm";
@@ -15,40 +15,50 @@ import useQueryForm from "./useQueryForm";
 type Queries = {[name: string]: any, page?: number, pageSize?: number, sorter?: {field: string, order: string}};
 
 export default function Layout({children}: {children: ReactNode}) {
+  const location = useLocation();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const cache = useCache();
 
   const columns = useTableColumns();
-  const [queries, setQueries] = useState<Queries>({page: 1, pageSize: 10, ...(cache.get("{{pluralizeKebabCase entityName}}") || {})});
+  const [rawQueries, setRawQueries] = useState<Queries>({page: 1, pageSize: 10, ...(cache.get("{{pluralizeKebabCase entityName}}") || {})});
+  const queries = useMemo(() => {
+    return Object.entries(rawQueries).reduce((queries: any, [key, value]) => {
+      if (value !== undefined) {
+        queries[key] = value;
+      }
+      return queries;
+    }, {});
+  }, [rawQueries]);
   const { isLoading, data: dataSource = {data: [], total: 0} } = useQuery<{data: any[], total: number}>({
-    queryKey: ["/{{pluralizeKebabCase entityName}}", queries],
+    queryKey: ["/api/{{pluralizeKebabCase entityName}}", queries],
     queryFn: ({queryKey}) => $axios.get(queryKey[0] as string, {params: queryKey[1]})
   });
   const onTableChange = useEvent((pagination, filters, sorter, extra) => {
-    setQueries((queries) => {
-      const newQueries = {
-        ...queries,
+    setRawQueries((rawQueries) => {
+      const newRawQueries = {
+        ...rawQueries,
         page: pagination.current,
         pageSize: pagination.pageSize,
       };
       if (sorter.order) {
-        newQueries.sorter = {
+        newRawQueries.sorter = {
           field: sorter.field,
           order: sorter.order,
         };
       }
       else {
-        delete newQueries.sorter;
+        delete newRawQueries.sorter;
       }
-      return newQueries;
+      return newRawQueries;
     });
   });
 
   const [queryForm, queryFormRef] = useQueryForm(queries);
   const onSearch = useEvent(() => {
-    setQueries((queries) => {
+    setRawQueries((rawQueries) => {
       return {
-        ...queries,
+        ...rawQueries,
         ...queryFormRef.getFieldsValue(),
         page: 1,
       }
@@ -59,24 +69,52 @@ export default function Layout({children}: {children: ReactNode}) {
     cache.set("{{pluralizeKebabCase entityName}}", queries);
   }, [queries]);
 
+  useEffect(() => {
+    queryClient.invalidateQueries({
+      queryKey: ["/api/{{pluralizeKebabCase entityName}}"]
+    })
+  }, [location, queryClient]);
+
+  const [selectedRowKeys, setSelectedRowKeys] = useState<Key[]>([]);
+  const hasSelected = selectedRowKeys.length > 0;
+  const rowSelection = {
+    preserveSelectedRowKeys: true,
+    selectedRowKeys,
+    onChange(newSelectedRowKeys: Key[]) {
+      setSelectedRowKeys(newSelectedRowKeys);
+    }
+  };
+
   const scroll = useMemo(() => ({x: 1000, y: 500}), []);
   const pagiation = useMemo(() => ({total: dataSource.total || dataSource.data.length}), [dataSource]);
 
   return (
-    <section>
-      <section className="rounded mt-1 mb-2 p-5 shadow-[1px_1px_5px_0px_#cdcdcd]">
+    <section className="m-1">
+      <section className="rounded mb-2 p-5 shadow-[1px_1px_5px_0px_#cdcdcd]">
         {queryForm}
         <Row justify={"end"} gutter={16}>
-          <Col><Button type="primary" onClick={onSearch}><IoSearch size={20} className="inline-block relative -top-[2px] mr-2"/>查 询</Button></Col>
+          <Col><Button onClick={onSearch} type="primary"><IoSearch size={20} className="inline-block relative -top-[2px] mr-2"/>查 询</Button></Col>
           <Col><Button onClick={() => navigate(`add`)}><IoMdAddCircleOutline size={20} className="inline-block relative -top-[2px] mr-2"/>新 增</Button></Col>
+          <Col><Button onClick={() => navigate(`delete`, { state: {ids: selectedRowKeys} })} disabled={!hasSelected} danger><IoMdRemoveCircleOutline size={20} className="inline-block relative -top-[2px] mr-2"/>删 除</Button></Col>
           <Col><Button onClick={() => navigate(`export`)}><TbDatabaseExport size={20} className="inline-block relative -top-[2px] mr-2"/>导 出</Button></Col>
           <Col><Button onClick={() => navigate(`import`)}><TbDatabaseImport size={20} className="inline-block relative -top-[2px] mr-2"/>导 入</Button></Col>
         </Row>
       </section>
       <section className="rounded mt-1 mb-2 p-5 shadow-[1px_1px_5px_0px_#cdcdcd]">
+        { 
+          hasSelected 
+          ? (
+            <div className="relative">
+              <Alert rootClassName="!mb-1" message={`已选择${selectedRowKeys.length}条记录`} type="info" showIcon />
+              <Button rootClassName="!absolute !top-1/2 right-2 transform -translate-y-1/2" type="link" onClick={() => {setSelectedRowKeys([]);}}>取 消</Button>
+            </div>
+          )
+          : null 
+        }
         <Table
           rowKey={"id"}
           columns={columns}
+          rowSelection={rowSelection}
           scroll={scroll}
           loading={isLoading}
           dataSource={dataSource.data}

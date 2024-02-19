@@ -1,14 +1,20 @@
 import { type NextRequest, type NextContext, NextResponse, objectify, withValidation } from "@meta-ultra/app-router";
-import { query } from "@meta-ultra/dexie-utilities";
 import { isEqual, isArray, isString } from "lodash-es";
 import * as yup from "yup";
+/* Dexie START */
+import { query } from "@meta-ultra/dexie-utilities";
 import { db, I{{~upperCamelCase entityName~}}TableName, I{{upperCamelCase entityName}}{{#unless (isNilorEmpty foreigns many)}}, {{upperCamelCase entityName}}{{/unless}} } from "{{databasePackage}}";
+/* Dexie END */
 
 const $table = db[I{{~upperCamelCase entityName~}}TableName];
 
 const searchParamsSchemaOfGet = yup.object({
   page: yup.number().integer().min(1),
   pageSize: yup.number().integer().min(1),
+  sorter: yup.object({
+    field: yup.string(),
+    order: yup.string(),
+  }),
   {{!-- {{#unless (isNilorEmpty (getPrimaryField fields))}}
   {{#with (getPrimaryField fields)}}
   {{this.[0]}}s: yup.array().of(yup.{{frameYupSchema this.[1]}}),
@@ -22,8 +28,9 @@ export const GET = withValidation(
   { searchParamsSchema: searchParamsSchemaOfGet },
   async function (request: NextRequest, context: NextContext) {
     try {
-      const { page, pageSize, ...rest } = searchParamsSchemaOfGet.cast(objectify(request.nextUrl.searchParams));
-      const { total, data } = await query($table, rest, page, pageSize);
+      const { page, pageSize, sorter, ...rest } = searchParamsSchemaOfGet.cast(objectify(request.nextUrl.searchParams));
+      /* Dexie START */
+      const { total, data } = await query($table, rest, page, pageSize, sorter);
       {{#unless (isNilorEmpty foreigns many)}}
 
       await Promise.all(
@@ -39,6 +46,7 @@ export const GET = withValidation(
         })
       );
       {{/unless}}
+      /* Dexie END */
 
       return NextResponse.json({
         code: 0,

@@ -14,7 +14,7 @@
   },
   "main": "./src/core/index.js",
   "bin": {
-    "app-router": "./src/cli-wrapper.js"
+    "meta-ultra": "./src/cli-wrapper.js"
   },
   "files": [
     "src"

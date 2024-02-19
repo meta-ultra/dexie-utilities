@@ -1,0 +1,95 @@
+import { useEffect, useState } from 'react';
+import { useLocation } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
+import * as XLSX from "xlsx-js-style";
+import { groupBy } from 'lodash-es';
+import { AiOutlineLoading3Quarters, AiFillCheckCircle, AiFillCloseCircle } from "react-icons/ai";
+import { useRouteModalContext } from '@/components/RouteModal';
+import $axios from '@/utils/$axios';
+
+export default function Page() {
+  const location = useLocation();
+  const context = useRouteModalContext();
+  const { isLoading, data: dataSource = {data: [], total: 0} } = useQuery<{data: any[], total: number}>({
+    queryKey: ["/api/groups", location.state && location.state.queries],
+    queryFn: ({queryKey}) => $axios.get(queryKey[0] as string, {params: queryKey[1]})
+  });
+  
+  useEffect(() => {
+    if (context) {
+      context.setModalProps({
+        width: 150,  
+        footer: null,
+        closeIcon: false,
+        maskClosable: false,
+      });
+    }
+  }, []);
+
+  const [isExporting, setIsExporting] = useState<Error | boolean>(true);
+  useEffect(() => {
+    if (!isLoading) {
+      try {
+        const rows = [];
+        for (let i = 0; i < dataSource.data.length; ++i) {
+          const row: any[] = [];
+          const record = dataSource.data[i];
+          row.push(record["name"]);
+          row.push(record["branch"]["name"]);
+          rows.push(row);
+        }
+
+        const bordered = {border: {top:{style: "thin", color: "00000000"}, right:{style: "thin", color: "00000000"}, bottom:{style: "thin", color: "00000000"}, left:{style: "thin", color: "00000000"}}};
+        const workbook = XLSX.utils.book_new();
+        const header0 = ["名称", "所属支部"];
+        const worksheet = XLSX.utils.aoa_to_sheet([
+          header0.map((value) => ({ v: value, t: "s", s: { ...bordered, alignment: { horizontal: "center", vertical: "center", wrapText: false }, fill: { fgColor: { rgb: "FFCC00" } } }})),
+          ...rows.map((row) => row.map((col: any) => ({ v: col, t: "s", s: { ...bordered, alignment: { horizontal: "center", vertical: "center", wrapText: false } } })))
+        ]);
+        worksheet["!cols"] = [{}, {}, ...(header0.slice(2).map((col) => {
+          const { alphanumerics, wides } = groupBy(col, (char) => /[a-z0-9!@#$%^&*()_+=-]/i.test(char) ? "alphanumerics" : "wides");
+          return {
+            wch: Math.floor((alphanumerics || []).length + (wides || []).length * 2.5)
+          }
+        }))];
+        // worksheet["!merges"] = [
+        //   { s: { r: 0, c: 0 }, e: { r: 0, c: 1 } },
+        // ];
+        XLSX.utils.book_append_sheet(workbook, worksheet, "小组信息");
+        XLSX.writeFile(workbook, "小组信息.xlsx");
+        setIsExporting(false);
+      }
+      catch(e) {
+        setIsExporting(e as Error);
+      }
+    }
+  }, [isLoading]);
+
+  useEffect(() => {
+    if (isExporting !== true) {
+      setTimeout(() => {
+        context.navigateBack();
+      }, 1200)
+    }
+  }, [isExporting]);
+
+  return (
+      isExporting === true 
+      ? (
+        <div className='flex justify-center'>
+          <AiOutlineLoading3Quarters size={24} className='relative inline-block -top-[2px] mr-3 text-blue-500 animate-spin'/>正在导出
+        </div>
+      ) 
+      : isExporting === false 
+      ? (
+        <div className='flex justify-center'>
+          <AiFillCheckCircle size={24} className='relative inline-block -top-[2px] mr-3 text-green-500'/>导出成功
+        </div>
+      )
+      : (
+        <div className='flex justify-center'>
+          <AiFillCloseCircle size={24} className='relative inline-block -top-[2px] mr-3 text-red-500'/>导出失败
+        </div>
+      )
+  )
+}

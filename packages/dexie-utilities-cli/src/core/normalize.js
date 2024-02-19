@@ -68,7 +68,10 @@ function normalizeUIProps(field, metdata) {
   field["$ui"] = field["$ui"] || {};
 
   field["$ui"].title = field["$ui"].title || field.title;
-  field["$ui"].required = field["$ui"].required || field.required;
+  field["$ui"].required = field["$ui"].required || field.required || false;
+  field["$ui"].columnSorter = field["$ui"].columnSorter || true;
+  field["$ui"].columnWidth = field["$ui"].columnWidth || (field["$ui"].title ? field["$ui"].title.length * 80 : "undefined");
+  field["$ui"].columnAlign = field["$ui"].columnAlign || "center";
 
   if (field.ref) {
     const [foreignTableName, condition, foreignFieldName] = tokenizeReference(field.ref);
@@ -89,6 +92,7 @@ function normalizeUIProps(field, metdata) {
   }
   else {
     field["$ui"].controls = field["$ui"].controls || "Input";
+    field["$ui"].maxLength = field["$ui"].maxLength || "undefined";
   }
 }
 

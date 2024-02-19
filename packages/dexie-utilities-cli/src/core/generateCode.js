@@ -2,7 +2,8 @@
 const { readFileSync } = require("node:fs");
 const { join, isAbsolute } = require("node:path");
 const Handlebars = require("handlebars");
-const { get, isString, camelCase, upperFirst, lowerCase, kebabCase } = require("lodash");
+const { get, isString, camelCase, upperFirst, lowerCase, kebabCase, capitalize } = require("lodash");
+const { tokenizeReference, tokenizeName } = require("./utils.js");
 
 /* Utilities */
 const pluralize = (x) => {
@@ -168,7 +169,7 @@ Handlebars.registerHelper(
     const [entityName, entityCofig] = entity;
     let controls = "";
     if (/^Input$/i.test(entityCofig["$ui"].controls)) {
-      controls = `<Input allowClear/>`;
+      controls = `<Input allowClear maxLength={${entityCofig["$ui"].maxLength}}/>`;
     }
     else if (/^InputNumber$/i.test(entityCofig["$ui"].controls)) {
       controls = `<InputNumber allowClear min={${entityCofig["$ui"].min}} max={${entityCofig["$ui"].max}} precision={${entityCofig["$ui"].precision}} />`;
@@ -177,12 +178,52 @@ Handlebars.registerHelper(
       controls = `<DatePicker />`;
     }
     else if (/^Select$/i.test(entityCofig["$ui"].controls)) {
-      controls = `<Select allowClear  showSearch filterOption={(input, option) => !!(option && option.children && option.children.indexOf(input as any) !== -1)}>{${pluralize(entityCofig["$ui"].dataSource)} && ${pluralize(entityCofig["$ui"].dataSource)}.map((${entityCofig["$ui"].dataSource}) => (<Select.Option key={${entityCofig["$ui"].value}} value={${entityCofig["$ui"].value}}>{${entityCofig["$ui"].label}}</Select.Option>))}</Select>`;
+      controls = `<Select allowClear showSearch filterOption={(input, option) => !!(option && option.children && option.children.indexOf(input as any) !== -1)}>{${getForeignPropertyName(entityName)} && ${getForeignPropertyName(entityName)}.map((${entityCofig["$ui"].dataSource}) => (<Select.Option key={${entityCofig["$ui"].value}} value={${entityCofig["$ui"].value}}>{${entityCofig["$ui"].label}}</Select.Option>))}</Select>`;
     }
 
     return new Handlebars.SafeString(controls);
   }
 );
+Handlebars.registerHelper(
+  "getForeignTableName",
+  (ref) => {
+    return tokenizeReference(ref)[0];
+  }
+);
+Handlebars.registerHelper(
+  "getForeignFieldName",
+  (ref) => {
+    return tokenizeReference(ref)[2];
+  }
+);
+const getForeignPropertyName = (fieldName) => {
+  const tokens = tokenizeName(fieldName);
+  if (tokens.length < 2) {
+    throw Error(`The foreign field name should be made of two words at least, but "${fieldName}" was found!`);
+  }
+  tokens.pop();
+  return tokens.map((token, i) => i === 0 ? token : capitalize(token)).join("");
+};
+
+const getControlsNamedImports = (fields) => {
+  const set = fields.reduce((set, field) => {
+    if (field[1]["$ui"]["title"]) {
+      set.add(field[1]["$ui"]["controls"]);
+    }
+
+    return set;
+  }, new Set());
+
+  return Array.from(set).join(", ");
+};
+
+const registerHandlers = (...fns) => {
+  fns.forEach((fn) => {
+    Handlebars.registerHelper(fn.name, fn);
+  });
+};
+registerHandlers(getForeignPropertyName, getControlsNamedImports);
+
 /* End of Register Helpers */
 
 /* Partials on fly */
@@ -232,7 +273,11 @@ const generateUICode = (entities) => {
   for (const [entityName, fields, foreigns, many] of entities) {
     code[`${pluralize(kebabCase(entityName))}/layout.tsx`] = generateCodeOnFly("../templates/ui/Layout.hbs", {entityName, fields, foreigns, many});
     code[`${pluralize(kebabCase(entityName))}/useQueryForm.tsx`] = generateCodeOnFly("../templates/ui/useQueryForm.hbs", {entityName, fields, foreigns, many});
-    code[`${pluralize(kebabCase(entityName))}/delete/page.tsx`] = generateCodeOnFly("../templates/ui/DeletePage.hbs", {entityName, fields, foreigns, many});
+    code[`${pluralize(kebabCase(entityName))}/useTableColumns.tsx`] = generateCodeOnFly("../templates/ui/useTableColumns.hbs", {entityName, fields, foreigns, many});
+    code[`${pluralize(kebabCase(entityName))}/(route-modal)/loading.tsx`] = generateCodeOnFly("../templates/ui/RouteModalLoading.hbs", {entityName, fields, foreigns, many});
+    code[`${pluralize(kebabCase(entityName))}/(route-modal)/delete/page.tsx`] = generateCodeOnFly("../templates/ui/DeletePage.hbs", {entityName, fields, foreigns, many});
+    code[`${pluralize(kebabCase(entityName))}/(route-modal)/add/page.tsx`] = generateCodeOnFly("../templates/ui/AddPage.hbs", {entityName, fields, foreigns, many});
+    code[`${pluralize(kebabCase(entityName))}/(route-modal)/[id]/edit/page.tsx`] = generateCodeOnFly("../templates/ui/EditPage.hbs", {entityName, fields, foreigns, many});
   }
 
   return code;
