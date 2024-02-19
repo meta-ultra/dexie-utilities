@@ -37,6 +37,7 @@ const query = async <E = any>(
   params: Record<string, any>,
   page?: number,
   pageSize?: number,
+  sorter?: {field: string, order: "ascend" | "descend"},
   filter = defaultFilter
 ): Promise<{ total: number, data: E[] }> => {
   const [queryDirectKeys, queryNestedKeys] = groupQueryKeys(getQueryParams(params));
@@ -47,7 +48,7 @@ const query = async <E = any>(
       const result = queryDirectKeys.reduce((result, queryKey) => {
         const value = get(record, queryKey);
         const queryValue = params[queryKey];
-        return filter(queryKey, value, queryValue);
+        return result && filter(queryKey, value, queryValue);
       }, true)
 
       return result;
@@ -89,10 +90,30 @@ const query = async <E = any>(
     if ((page - 1)* pageSize > total) {
       page = Math.floor(total / pageSize) + 1;
     }
-    data = (await collection.offset((page - 1)* pageSize).limit(pageSize).toArray()) as E[];
+    if (sorter && sorter.field && sorter.order) {
+      if (sorter.order === "ascend") {
+        data = (await collection.offset((page - 1)* pageSize).limit(pageSize).reverse().sortBy(sorter.field)) as E[];
+      }
+      else {
+        data = (await collection.offset((page - 1)* pageSize).limit(pageSize).sortBy(sorter.field)) as E[];
+      }
+    }
+    else {
+      data = (await collection.offset((page - 1)* pageSize).limit(pageSize).toArray()) as E[];
+    }
   }
   else {
-    data = (await collection.toArray()) as E[];
+    if (sorter && sorter.field && sorter.order) {
+      if (sorter.order === "ascend") {
+        data = (await collection.reverse().sortBy(sorter.field)) as E[];
+      }
+      else {
+        data = (await collection.sortBy(sorter.field)) as E[];
+      }
+    }
+    else {
+      data = (await collection.toArray()) as E[];
+    }
   }
 
   return { total, data };
