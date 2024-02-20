@@ -1,0 +1,204 @@
+import { useEffect, useState } from 'react'
+import { Button, Form, Row, Col, Table, Select, Upload } from "antd";
+import { useMutation, useSuspenseQuery } from '@tanstack/react-query';
+import useEvent from 'react-use-event-hook';
+import { MdOutlineCloudUpload } from "react-icons/md";
+import * as XLSX from "xlsx-js-style";
+import { useRouteModalContext } from '@/components/RouteModal'
+import { usePopup } from '@/utils/PopupContext';
+import $axios from '@/utils/$axios';
+import { {{#unless (isNilorEmpty foreigns)}}isArray, isNumber, {{/unless}}differenceWith, isEqual, groupBy } from "lodash-es";
+import useTableColumns from './useTableColumns';
+import styles from "./styles.module.css";
+
+export default function Page() {
+  {{#each foreigns}}
+  const {data: {{getForeignPropertyName this.[0]~}} } = useSuspenseQuery({
+    queryKey: [`/api/{{pluralizeKebabCase this.[1].entityName}}`, {{{this.[1].condition}}}],
+    async queryFn({queryKey}) {
+      const res: {total: number, data: any[]} | any[] = await $axios.get(queryKey[0] as string, {params: queryKey[1] || {}});
+      if (isArray(res)) {
+        return res;
+      }
+      else if (isNumber(res.total) && isArray(res.data)) {
+        return res.data;
+      }
+    }
+  });
+  {{/each}}
+
+  const context = useRouteModalContext();
+  const { message } = usePopup();
+  const [formRef] = Form.useForm();
+  const mutation = useMutation({
+    mutationFn() {
+      const data = dataSource.data.map(({id, ...record}) => ({
+        ...record,
+        ...formRef.getFieldsValue()
+      }));
+
+      return $axios.post(`/api/groups`, data);
+    }
+  });
+
+  const onConfirm = useEvent(async () => {
+    try {
+      await formRef.validateFields();
+
+      try {
+        await mutation.mutateAsync();
+        context.navigateBack();
+        message.success("操作成功");
+      }
+      catch(e) {
+        message.error("操作失败: " + (e as Error).message);
+      }
+    }
+    catch(e) {
+      if (process.env.NODE_ENV !== "production") {
+        console.warn(e);
+      }
+    }
+  });
+
+  useEffect(() => {
+    if (context) {
+      context.setModalProps({
+        title: "批量导入",
+        width: "80%",
+        footer: [
+          <Button key="cancel" onClick={context.navigateBack}>取 消</Button>,
+          <Button key="confirm" loading={mutation.isPending} type='primary' onClick={onConfirm}>确 定</Button>,
+        ],
+      })
+    }
+  }, [mutation.isPending]);
+
+  /* Excel Template START */
+  const downloadTemplate = useEvent(() => {
+    const bordered = {border: {top:{style: "thin", color: "00000000"}, right:{style: "thin", color: "00000000"}, bottom:{style: "thin", color: "00000000"}, left:{style: "thin", color: "00000000"}}};
+    const workbook = XLSX.utils.book_new();
+    const header0 = [{{#each fields}}{{#unless (isNilorEmpty this.[1].$ui.title)}}{{#if (isNilorEmpty this.[1].ref)}}, "{{this.[1].$ui.title}}"{{/if}}{{/unless}}{{/each}}].slice(1);
+    const worksheet = XLSX.utils.aoa_to_sheet([
+      header0.map((value) => ({ v: value, t: "s", s: { ...bordered, alignment: { horizontal: "center", vertical: "center", wrapText: false }, fill: { fgColor: { rgb: "FFCC00" } } }})),
+    ]);
+    worksheet["!cols"] = [{}, {}, ...(header0.slice(2).map((col) => {
+      const { alphanumerics, wides } = groupBy(col, (char) => /[a-z0-9!@#$%^&*()_+=-]/i.test(char) ? "alphanumerics" : "wides");
+      return {
+        wch: Math.floor((alphanumerics || []).length + (wides || []).length * 2.5)
+      }
+    }))];
+    XLSX.utils.book_append_sheet(workbook, worksheet, "小组信息");
+    XLSX.writeFile(workbook, "小组信息导入模板.xlsx");
+  })
+  /* Excel Template START */
+
+  /* Table START */
+  const [dataSource, setDataSource] = useState<{data: any[]}>({data: []});
+  const onDelete = useEvent((id: number) => {
+    setDataSource(({data}) => ({
+      data: data.filter((record) => record.id !== id)
+    }));
+  });
+  const columns = useTableColumns(onDelete);
+  /* Table END */
+
+  return (
+    <div>
+      <Form form={formRef}>
+        <Row gutter={16}>
+          {{#each fields}}
+          {{#unless (isNilorEmpty this.[1].ref)}}
+          <Col span={6}>
+            <Form.Item label={"{{this.[1].$ui.title}}"} name={"{{this.[0]}}"} rules={[{required: {{this.[1].$ui.required~}} }]}>
+              {{getQueryFormControls this}}
+            </Form.Item>
+          </Col>
+          {{/unless}}
+          {{/each}}
+          <Col span={12}>
+            <Form.Item>
+              <div className={'flex flex-row gap-2 ' + styles.upload}>
+                <Upload
+                  accept=".xlsx,.xls"
+                  maxCount={1}
+                  beforeUpload={(file) => {
+                    if (!/\.xlsx$/i.test(file.name)) {
+                      message.warning("请上传后缀名为.xlsx或.xls的Excel文件");
+                      return Upload.LIST_IGNORE;
+                    }
+                    return false;
+                  }}
+                  onChange={({file}) => {
+                    const reader = new FileReader();
+                    reader.onload = (ev: ProgressEvent<FileReader>) => {
+                      const data = ev.target?.result;
+                      if (data) {
+                        const workbook = XLSX.read(data, { type: 'binary' });
+                        if (workbook.SheetNames.length > 0) {
+                          const sheet = workbook.Sheets[workbook.SheetNames[0] as string];
+                          const array = XLSX.utils.sheet_to_json(sheet as any);
+                          if (array) {
+                            let records: any[] = [];
+                            for (let i = 0; i < array.length; i++) {
+                              const cols = Object.values(array[i] as object);
+                              let idx = 0;
+                              let record: any = { {{#each fields}}{{#unless (isNilorEmpty this.[1].$ui.title)}}{{#if (isNilorEmpty this.[1].ref)}}
+                                {{this.[0]}}: cols[idx++], {{/if}}{{/unless}}{{/each}}
+                              };
+                              // deduplicate
+                              record = differenceWith([record], records, isEqual)[0];
+                              if (record) {
+                                records.push(record);
+                              }
+                            }
+
+                            // deduplicate
+                            records = differenceWith(records, dataSource.data, (x, y) => {
+                              const {id, ...rest} = y;
+                              return isEqual(x, rest);
+                            });
+
+                            const lastRecord = dataSource.data[dataSource.data.length - 1] as undefined | {id: number};
+                            const startId = lastRecord && !isNaN(lastRecord.id) ? lastRecord.id + 1 : 0;
+                            records = records.map((record, i) => ({id: startId + i, ...record}));
+                            
+                            setDataSource(({data}) => ({
+                              data: data.concat(records)
+                            }));
+                          }
+                        }
+                      }
+                    }
+                    reader.onerror = (e) => {
+                      message.error("读取文件内容失败，请确认使用最新导入模板！");
+                    }
+                    reader.readAsBinaryString(file as unknown as Blob);
+                  }}
+                >
+                  <Button>
+                    <MdOutlineCloudUpload size={20} className="inline-block mr-1 relative -top-[2px]" />
+                    上传Excel
+                  </Button>
+                </Upload>
+                <a className=' leading-[32px]' onClick={downloadTemplate}>下载Excel模板</a>
+              </div>
+            </Form.Item>
+          </Col>
+        </Row>
+      </Form>
+      <Row>
+        <Col span={24}>
+          <Table 
+            rowKey={"id"}
+            columns={columns}
+            scroll=\{{y: 500}}
+            dataSource={dataSource.data}
+            pagination=\{{total: dataSource.data.length}}
+          />
+        </Col>
+      </Row>
+    </div>
+  )
+}
+

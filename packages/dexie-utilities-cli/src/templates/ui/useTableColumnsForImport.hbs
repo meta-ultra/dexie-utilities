@@ -1,0 +1,38 @@
+import { useMemo } from 'react';
+import { Space } from "antd";
+import { useNavigate } from 'react-router-dom';
+import { AiOutlineDelete } from "react-icons/ai";
+
+export default function useTableColumns(onDelete: (id: number) => void) {
+  const navigate = useNavigate();
+
+  const columns = useMemo(() => {
+    return [
+      {{#each fields}}
+      {{#unless (isNilorEmpty this.[1].$ui.title)}}
+      {{#if (isNilorEmpty this.[1].ref)}}
+      { title: "{{this.[1].$ui.title}}", dataIndex: "{{this.[0]}}", key: "{{this.[0]}}", sorter: {{this.[1].$ui.columnSorter}}, align: "{{this.[1].$ui.columnAlign}}", width: {{this.[1].$ui.columnWidth}}, 
+        render(value: any, record: any) {
+        {{#unless (isNilorEmpty this.[1].ref)}}
+          return record["{{getForeignPropertyName this.[0]}}"]["{{getForeignFieldName this.[1].$ui.label}}"];
+        {{else}}
+          return value;
+        {{/unless}}
+        }
+      },
+      {{/if}}
+      {{/unless}}
+      {{/each}}
+
+      { key: "action", fixed: "right", width: 75, align: "center", render(_: any, record: any) {
+        return (
+          <Space size="middle">
+            <a onClick={() => onDelete(record.id)} className='!text-red-400 hover:!text-red-300'><AiOutlineDelete className='inline-block relative -top-[2px]' size={16}/>删 除</a>
+          </Space>
+        )
+      }},
+    ];
+  }, [navigate])
+
+  return columns;
+}

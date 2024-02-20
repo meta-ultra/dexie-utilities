@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import { useLocation } from 'react-router-dom';
 import { Button } from "antd";
-import { useQueryClient, useMutation } from '@tanstack/react-query';
+import { useMutation } from '@tanstack/react-query';
 import useEvent from 'react-use-event-hook';
 import { AiFillQuestionCircle } from "react-icons/ai"
 import $axios from '@/utils/$axios';
@@ -12,7 +12,6 @@ export default function Page() {
   const location = useLocation();
   const context = useRouteModalContext();
   const { message } = usePopup();
-  const queryClient = useQueryClient();
   const mutation = useMutation({
     mutationFn() {
       return $axios.delete(`/api/{{pluralizeKebabCase entityName}}`, {params: {ids: location.state.ids}});
@@ -22,7 +21,7 @@ export default function Page() {
   const onConfirm = useEvent(async () => {
     try {
       await mutation.mutateAsync();
-      queryClient.invalidateQueries({ queryKey: ["/api/{{pluralizeKebabCase entityName}}"] });
+      context.context?.clearSelectedRowKeysAfterDelete(location.state.ids);
       context.navigateBack();
       message.success("操作成功");
     }

@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import { Button, Form, Row, Col, {{getControlsNamedImports fields}} } from "antd";
-import { useQueryClient, useMutation, useSuspenseQuery } from '@tanstack/react-query';
+import { useMutation, useSuspenseQuery } from '@tanstack/react-query';
 import useEvent from 'react-use-event-hook';
 import { useRouteModalContext } from '@/components/RouteModal'
 import { usePopup } from '@/utils/PopupContext';
@@ -35,7 +35,6 @@ export default function Page({params}: {params: {id: string}}) {
   const context = useRouteModalContext();
   const { message } = usePopup();
   const [formRef] = Form.useForm();
-  const queryClient = useQueryClient();
   const mutation = useMutation({
     mutationFn() {
       return $axios.put(`/api/{{pluralizeKebabCase entityName}}/${params.id}`, formRef.getFieldsValue());
@@ -48,7 +47,6 @@ export default function Page({params}: {params: {id: string}}) {
 
       try {
         await mutation.mutateAsync();
-        queryClient.invalidateQueries({ queryKey: [`/api/{{pluralizeKebabCase entityName}}`] });
         context.navigateBack();
         message.success("操作成功");
       }
@@ -85,14 +83,14 @@ export default function Page({params}: {params: {id: string}}) {
       <Form form={formRef}>
         <Row gutter={16}>
           {{#each fields}}
-        {{#unless (isNilorEmpty this.[1].$ui.title)}}
-        <Col span={6}>
-          <Form.Item label={"{{this.[1].$ui.title}}"} name={"{{this.[0]}}"} rules={[{required: {{this.[1].$ui.required~}} }]}>
-            {{getQueryFormControls this}}
-          </Form.Item>
-        </Col>
-        {{/unless}}
-        {{/each}}
+          {{#unless (isNilorEmpty this.[1].$ui.title)}}
+          <Col span={6}>
+            <Form.Item label={"{{this.[1].$ui.title}}"} name={"{{this.[0]}}"} rules={[{required: {{this.[1].$ui.required~}} }]}>
+              {{getQueryFormControls this}}
+            </Form.Item>
+          </Col>
+          {{/unless}}
+          {{/each}}
         </Row>
       </Form>
     </div>

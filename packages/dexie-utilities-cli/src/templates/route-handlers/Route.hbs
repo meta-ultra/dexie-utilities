@@ -121,17 +121,37 @@ export const DELETE = withValidation(
   }
 );
 
-const bodySchemaOfPost = yup.object({
+const singleBodySchemaOfPost = yup.object({
   {{#each fields}}
   {{this.[0]~}}: yup.{{frameYupSchema this.[1] true}},
   {{/each}}
 });
+const batchBodySchemaOfPost = yup.array().of(singleBodySchemaOfPost);
+const bodySchemaOfPost = yup.mixed().test((value) => {
+  return singleBodySchemaOfPost.isValidSync(value) || batchBodySchemaOfPost.isValidSync(value);
+});
 export const POST = withValidation(
   { bodySchema: bodySchemaOfPost },
   async function (request: NextRequest, context: NextContext) {
+    const json = await request.json();
+    const isBatch = batchBodySchemaOfPost.isValidSync(json);
     try {
-      const data = bodySchemaOfPost.cast(await request.json());
-      $table.add({...data});
+      if (isBatch) {
+        const records = batchBodySchemaOfPost.cast(json);
+        if (records) {
+          await Promise.all(
+            records.map(async (record) => {
+              if (!await $table.where(record).count()) {
+                $table.add({...record});
+              }
+            })
+          )
+        } 
+      }
+      else {
+        const record = singleBodySchemaOfPost.cast(json);
+        $table.add({...record});
+      }
       return NextResponse.json({code: 0});
     }
     catch(e) {

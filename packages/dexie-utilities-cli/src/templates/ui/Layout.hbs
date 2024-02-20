@@ -12,6 +12,11 @@ import $axios from "@/utils/$axios";
 import useTableColumns from "./useTableColumns";
 import useQueryForm from "./useQueryForm";
 
+const RouteModalRoutes = [
+  /\/(delete|add|import|export)$/,
+  /\/[^/]+\/(edit)$/,
+] as const;
+
 type Queries = {[name: string]: any, page?: number, pageSize?: number, sorter?: {field: string, order: string}};
 
 export default function Layout({children}: {children: ReactNode}) {
@@ -70,12 +75,19 @@ export default function Layout({children}: {children: ReactNode}) {
   }, [queries]);
 
   useEffect(() => {
-    queryClient.invalidateQueries({
-      queryKey: ["/api/{{pluralizeKebabCase entityName}}"]
-    })
-  }, [location, queryClient]);
+    if (!RouteModalRoutes.find((re) => re.test(location.pathname))) {
+      queryClient.invalidateQueries({
+        queryKey: ["/api/{{pluralizeKebabCase entityName}}"]
+      });
+    }
+  }, [location.pathname, queryClient]);
 
   const [selectedRowKeys, setSelectedRowKeys] = useState<Key[]>([]);
+  const clearSelectedRowKeysAfterDelete = useEvent((ids: any[]) => {
+    setSelectedRowKeys((selectedRowKeys) => {
+      return selectedRowKeys.filter((key) => !ids.find((id) => id === key))
+    })
+  });
   const hasSelected = selectedRowKeys.length > 0;
   const rowSelection = {
     preserveSelectedRowKeys: true,
@@ -84,9 +96,6 @@ export default function Layout({children}: {children: ReactNode}) {
       setSelectedRowKeys(newSelectedRowKeys);
     }
   };
-
-  const scroll = useMemo(() => ({x: 1000, y: 500}), []);
-  const pagiation = useMemo(() => ({total: dataSource.total || dataSource.data.length}), [dataSource]);
 
   return (
     <section className="m-1">
@@ -115,17 +124,14 @@ export default function Layout({children}: {children: ReactNode}) {
           rowKey={"id"}
           columns={columns}
           rowSelection={rowSelection}
-          scroll={scroll}
+          scroll=\{{x: 1000, y: 500}}
           loading={isLoading}
           dataSource={dataSource.data}
-          pagination={pagiation}
+          pagination=\{{total: dataSource.total || dataSource.data.length}}
           onChange={onTableChange}
         />
       </section>
-      <RouteModal routes={[
-        /\/(delete|add|import|export)$/,
-        /\/[^/]+\/(edit)$/,
-      ]}>
+      <RouteModal routes={RouteModalRoutes} context=\{{clearSelectedRowKeysAfterDelete}}>
         {children}
       </RouteModal>
     </section>
