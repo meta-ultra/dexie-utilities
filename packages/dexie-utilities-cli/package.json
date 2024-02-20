@@ -38,6 +38,7 @@
     "chokidar": "^3.5.3",
     "cli-welcome": "^2.2.2",
     "concat-stream": "^2.0.0",
+    "glob": "^10.3.10",
     "handlebars": "^4.7.8",
     "lodash": "^4.17.21",
     "lodash-es": "^4.17.21",

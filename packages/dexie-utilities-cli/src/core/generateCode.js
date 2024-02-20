@@ -1,6 +1,7 @@
 /*eslint-disable*/
 const { readFileSync } = require("node:fs");
-const { join, isAbsolute } = require("node:path");
+const { join, isAbsolute, relative } = require("node:path");
+const { globSync } = require("glob");
 const Handlebars = require("handlebars");
 const { get, isString, camelCase, upperFirst, lowerCase, kebabCase, capitalize } = require("lodash");
 const { tokenizeReference, tokenizeName } = require("./utils.js");
@@ -243,55 +244,63 @@ const generateCodeOnFly = (path, context, options) => {
   return template(context, options);
 };
 
-const generateDBCode = (entities) => {
-  const code = {
-    "db.ts": generateCodeOnFly("../templates/db/DB.hbs", {entities}),
-    "index.ts": generateCodeOnFly("../templates/db/DBIndex.hbs", {entities}),
-  };
+const splashify = (x) => x.replace(/\\/g, "/");
+const generate = (templateDirRelativePath, entities, databasePackage) => {
+  // replace back splash with splash, and strip the trailing splash away.
+  templateDirRelativePath = splashify(templateDirRelativePath).replace(/\/\s*$/, "");
+  const absolutePaths = globSync(splashify(join(__dirname, templateDirRelativePath + "/**/*.*")));
+  const relativePaths = absolutePaths.map((absolutePath) => splashify(relative(__dirname, absolutePath)));
+
+  const files = {};
   for (const [entityName, fields, foreigns, many] of entities) {
-    code[`entities/I${upperFirst(camelCase(entityName))}/index.ts`] = generateCodeOnFly("../templates/db/EntityIndex.hbs", {entityName, fields, foreigns});
-    code[`entities/I${upperFirst(camelCase(entityName))}/I${upperFirst(camelCase(entityName))}.ts`] = generateCodeOnFly("../templates/db/IEntity.hbs", {entityName, fields, foreigns});
-    code[`entities/I${upperFirst(camelCase(entityName))}/${upperFirst(camelCase(entityName))}.ts`] = generateCodeOnFly("../templates/db/Entity.hbs", {entityName, fields, foreigns, many});
-    code[`entities/I${upperFirst(camelCase(entityName))}/I${upperFirst(camelCase(entityName))}Populator.ts`] = generateCodeOnFly("../templates/db/EntityPopulator.hbs", {entityName, fields, foreigns});
+    for (const relativePath of relativePaths) {
+      if (/\.hbs$/i.test(relativePath)) {
+        files[`${pluralize(kebabCase(entityName))}${relativePath.replace(templateDirRelativePath, "").replace(/\.hbs$/i, "")}`] = generateCodeOnFly(relativePath, {entityName, fields, foreigns, many, databasePackage});
+      }
+      else {
+        files[`${pluralize(kebabCase(entityName))}${relativePath.replace(templateDirRelativePath, "")}`] = readFileSync(join(__dirname, relativePath)).toString("utf-8");
+      }
+    }
   }
 
-  return code;
+  return files;
 }
 
-const generateRouteHandlerCode = (entities, databasePackage) => {
-  const code = {};
-  for (const [entityName, fields, foreigns, many] of entities) {
-    code[`${pluralize(kebabCase(entityName))}/route.ts`] = generateCodeOnFly("../templates/route-handlers/Route.hbs", {entityName, fields, foreigns, databasePackage, many});
-    code[`${pluralize(kebabCase(entityName))}/[id]/route.ts`] = generateCodeOnFly("../templates/route-handlers/Route[id].hbs", {entityName, fields, foreigns, databasePackage});
+const generateDBCode = (templateDirRelativePath, entities) => {
+  const files = {};
+  const absolutePaths = globSync(splashify(join(__dirname, templateDirRelativePath + "/*.*")));
+  const relativePaths = absolutePaths.map((absolutePath) => splashify(relative(__dirname, absolutePath)));
+  for (const relativePath of relativePaths) {
+    if (/\.hbs$/i.test(relativePath)) {
+      files[`${relativePath.replace(templateDirRelativePath, "").replace(/\.hbs$/i, "")}`] = generateCodeOnFly(relativePath, {entities});
+    }
+    else {
+      files[`${relativePath.replace(templateDirRelativePath, "")}`] = readFileSync(join(__dirname, relativePath)).toString("utf-8");
+    }
   }
 
-  return code;
-}
-
-const generateUICode = (entities) => {
-  const code = {};
+  const entitiesAbsolutePaths = globSync(splashify(join(__dirname, templateDirRelativePath + "/entities/**/*.*")));
+  const entitiesRelativePaths = entitiesAbsolutePaths.map((absolutePath) => splashify(relative(__dirname, absolutePath)));
   for (const [entityName, fields, foreigns, many] of entities) {
-    code[`${pluralize(kebabCase(entityName))}/layout.tsx`] = generateCodeOnFly("../templates/ui/Layout.hbs", {entityName, fields, foreigns, many});
-    code[`${pluralize(kebabCase(entityName))}/useQueryForm.tsx`] = generateCodeOnFly("../templates/ui/useQueryForm.hbs", {entityName, fields, foreigns, many});
-    code[`${pluralize(kebabCase(entityName))}/useTableColumns.tsx`] = generateCodeOnFly("../templates/ui/useTableColumns.hbs", {entityName, fields, foreigns, many});
-    code[`${pluralize(kebabCase(entityName))}/(route-modal)/loading.tsx`] = generateCodeOnFly("../templates/ui/RouteModalLoading.hbs", {entityName, fields, foreigns, many});
-    code[`${pluralize(kebabCase(entityName))}/(route-modal)/delete/page.tsx`] = generateCodeOnFly("../templates/ui/DeletePage.hbs", {entityName, fields, foreigns, many});
-    code[`${pluralize(kebabCase(entityName))}/(route-modal)/add/page.tsx`] = generateCodeOnFly("../templates/ui/AddPage.hbs", {entityName, fields, foreigns, many});
-    code[`${pluralize(kebabCase(entityName))}/(route-modal)/export/page.tsx`] = generateCodeOnFly("../templates/ui/ExportPage.hbs", {entityName, fields, foreigns, many});
-    code[`${pluralize(kebabCase(entityName))}/(route-modal)/import/page.tsx`] = generateCodeOnFly("../templates/ui/ImportPage.hbs", {entityName, fields, foreigns, many});
-    code[`${pluralize(kebabCase(entityName))}/(route-modal)/import/useTableColumns.tsx`] = generateCodeOnFly("../templates/ui/useTableColumnsForImport.hbs", {entityName, fields, foreigns, many});
-    code[`${pluralize(kebabCase(entityName))}/(route-modal)/[id]/edit/page.tsx`] = generateCodeOnFly("../templates/ui/EditPage.hbs", {entityName, fields, foreigns, many});
+    for (const relativePath of entitiesRelativePaths) {
+      if (/\.hbs$/i.test(relativePath)) {
+        files[`${relativePath.replace(templateDirRelativePath, "").replace(/{{Entity}}/g, upperFirst(camelCase(entityName))).replace(/\.hbs$/i, "")}`] = generateCodeOnFly(relativePath, {entityName, fields, foreigns, many});
+      }
+      else {
+        files[`${relativePath.replace(templateDirRelativePath, "").replace(/{{Entity}}/g, upperFirst(camelCase(entityName)))}`] = readFileSync(join(__dirname, relativePath)).toString("utf-8");
+      }
+    }
   }
 
-  return code;
+  return files;
 }
 
 const generateCode = (entities, databasePackage) => {
-  const db = generateDBCode(entities);
-  const routeHandlers = generateRouteHandlerCode(entities, databasePackage);
-  const ui = generateUICode(entities);
+  const dexie = generateDBCode("../templates/dexie", entities);
+  const routeHandlers = generate("../templates/route-handlers", entities, databasePackage)
+  const ui = generate("../templates/ui", entities)
 
-  return {db, routeHandlers, ui};
+  return {dexie, routeHandlers, ui};
 }
 
 module.exports = {

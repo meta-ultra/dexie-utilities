@@ -81,6 +81,7 @@ export const DELETE = withValidation(
   async function (request: NextRequest, context: NextContext) {
     try {
       let { {{#unless (isNilorEmpty (getPrimaryField fields))}}{{#with (getPrimaryField fields)}}{{this.[0]}}s, {{/with}}{{/unless}}...rest } = searchParamsSchemaOfDelete.cast(objectify(request.nextUrl.searchParams));
+      /* Dexie START */
       await db.transaction("rw", $table, async () => {
         {{#unless (isNilorEmpty (getPrimaryField fields))}}{{#with (getPrimaryField fields)~}}
         if (isArray({{this.[0]}}s)) {
@@ -109,6 +110,7 @@ export const DELETE = withValidation(
         }));
         {{/unless}}
       });
+      /* Dexie END */
       return NextResponse.json({code: 0});
     }
     catch(e) {
@@ -139,6 +141,7 @@ export const POST = withValidation(
       if (isBatch) {
         const records = batchBodySchemaOfPost.cast(json);
         if (records) {
+          /* Dexie START */
           await Promise.all(
             records.map(async (record) => {
               if (!await $table.where(record).count()) {
@@ -146,11 +149,14 @@ export const POST = withValidation(
               }
             })
           )
+          /* Dexie END */
         } 
       }
       else {
         const record = singleBodySchemaOfPost.cast(json);
+        /* Dexie START */
         $table.add({...record});
+        /* Dexie END */
       }
       return NextResponse.json({code: 0});
     }

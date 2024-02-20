@@ -1,0 +1,4 @@
+export { db } from "./db"
+{{#each entities}}
+export { type I{{~upperCamelCase this.[0]~}}, I{{~upperCamelCase this.[0]~}}TableName, {{upperCamelCase this.[0]}} } from './entities/I{{~upperCamelCase this.[0]~}}';
+{{/each}}

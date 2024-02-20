@@ -1,0 +1,62 @@
+import { Table } from "dexie";
+import { db } from "../../db";
+import { pick, isEqual } from "lodash-es";
+import { type I{{~upperCamelCase entityName~}}, I{{~upperCamelCase entityName~}}TableName } from "./I{{~upperCamelCase entityName~}}";
+{{#each (getEntityNameOfForeigns foreigns many)}}
+import { type I{{~upperCamelCase this~}}, I{{~upperCamelCase this~}}TableName, {{upperCamelCase this}} } from "../I{{~upperCamelCase this~}}";
+{{/each}}
+
+export class {{upperCamelCase entityName}} implements I{{~upperCamelCase entityName}} {
+  $table: Table;
+
+{{#each fields}}
+  {{this.[0]}}{{~#unless this.[1].required~}}?{{~/unless~}}: {{this.[1].type~}};
+{{/each}}
+
+{{#each foreigns}}
+  {{getForeignPropertyName this.[0]~}}?: {{upperCamelCase this.[1].entityName~}};
+{{/each}}
+{{#each many}}
+  {{pluralizeLowerCamelCase this.[1].entityName~}}?: {{upperCamelCase this.[1].entityName~}}[];
+{{/each}}
+
+  constructor({{#each (sortByRequiredFirst fields)}}{{#if @index}}, {{/if}}{{this.[0]}}{{#unless this.[1].required}}?{{/unless}}: {{this.[1].type}}{{/each}}) {
+    this.$table = db[I{{~upperCamelCase entityName~}}TableName];
+
+  {{#each (sortByRequiredFirst fields)}}
+    {{#if (get this "1.required")}}
+    this.{{~this.[0]}} = {{this.[0]~}};
+    {{else}}
+    if ({{~this.[0]}} !== undefined) this.{{this.[0]}} = {{this.[0]~}};
+    {{/if}}
+  {{/each}}
+  }
+  {{#each foreigns}}
+
+  async load{{~upperCamelCase (getForeignPropertyName this.[0])~}}() {
+    if (this.{{~this.[0]}} !== undefined) {
+      const record = await db[I{{~upperCamelCase this.[1].entityName~}}TableName].get({
+        "{{~this.[1].fieldName~}}": this.{{~this.[0]~}},{{#unless (isNilorEmpty this.[1].condition)}}
+        ...Object({{{this.[1].condition}}}),{{/unless}}
+      });
+      if (record) {
+        this.{{~getForeignPropertyName this.[0]}} = record as {{upperCamelCase this.[1].entityName~}};
+      }
+    }
+  }
+  {{/each}}
+  {{#each many}}
+
+  async load{{~upperCamelCase (pluralizeLowerCamelCase this.[1].entityName)~}}() {
+    {{#unless (isNilorEmpty this.[1].manyCondition)}}
+    if (!isEqual(pick(this, Object.keys({{{this.[1].manyCondition}}})), {{{this.[1].manyCondition}}})) {
+      this.{{~pluralizeLowerCamelCase this.[1].entityName}} = [];
+    }
+
+    {{/unless}}
+    this.{{~pluralizeLowerCamelCase this.[1].entityName}} = await db[I{{~upperCamelCase this.[1].entityName~}}TableName].filter((record) => {
+      return record.{{this.[1].fieldName}} === this.{{~this.[0]~}};
+    }).toArray();
+  }
+  {{/each}}
+}

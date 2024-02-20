@@ -14,6 +14,7 @@ export const GET = withValidation(
   async function (request: NextRequest, context: NextContext) {
     try {
       const params = paramsSchemaOfGet.cast(context.params);
+      /* Dexie START */
       const data = await $table.get(params){{#unless (isNilorEmpty foreigns)}} as {{upperCamelCase entityName}} | undefined{{/unless}};
       {{#unless (isNilorEmpty foreigns)}}
       if (data) {
@@ -24,6 +25,7 @@ export const GET = withValidation(
         ]);
       }
       {{/unless}}
+      /* Dexie END */
 
       return NextResponse.json({
         code: 0,
@@ -57,7 +59,9 @@ export const PUT = withValidation(
     try {
       const params = paramsSchemaOfPut.cast(context.params);
       const data = bodySchemaOfPut.cast(await request.json());
+      /* Dexie START */
       await $table.update(params.id, data);
+      /* Dexie END */
       return NextResponse.json({ code: 0 });
     }
     catch(e) {

@@ -62,9 +62,9 @@ if (!parsed.options.h && !parsed.options.v) {
         const re = RegExp(filter);
         entities = entities.filter(([entityName]) => re.test(entityName));
       }
-      const {db, routeHandlers, ui} = generateCode(entities, databasePackage);
+      const {dexie, routeHandlers, ui} = generateCode(entities, databasePackage);
 
-      await Promise.all(Object.entries(db).map(([path, source]) => {
+      await Promise.all(Object.entries(dexie).map(([path, source]) => {
         return new Promise((resolve, reject) => {
           const fullPath = join(dbOutputPath, path);
           mkdir(dirname(fullPath), { recursive: true }, (err) => {
