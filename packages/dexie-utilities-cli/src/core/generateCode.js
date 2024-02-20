@@ -96,7 +96,7 @@ Handlebars.registerHelper(
   "getIndexes",
   (fields) => {
     if (fields && fields.length) {
-      return fields.reduce((indexes, field) => {
+      let indexes = fields.reduce((indexes, field) => {
         const fieldOpts = field[1];
         if (fieldOpts.indexed !== false) {
           const fieldName = field[0];
@@ -104,7 +104,13 @@ Handlebars.registerHelper(
         }
 
         return indexes;
-      }, []).join(", ");
+      }, []);
+      indexes = indexes.sort((a,b)=>{
+        const aScore = a.startsWith("++") ? 0 : 1; 
+        const bScore = b.startsWith("++") ? 0 :1; 
+        return aScore - bScore > 0 ? 1 : -1;
+      })
+      return indexes.join(", ");
     }
     else {
       return "";
