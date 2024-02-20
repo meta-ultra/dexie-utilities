@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
+import useEvent from 'react-use-event-hook';
 import * as XLSX from "xlsx-js-style";
-import { groupBy } from 'lodash-es';
+import { groupBy, debounce } from 'lodash-es';
 import { AiOutlineLoading3Quarters, AiFillCheckCircle, AiFillCloseCircle } from "react-icons/ai";
-import { useRouteModalContext } from '@/components/RouteModal';
+import { useRouteModalContext } from '@/components/@meta-ultra/antd-plus';
 import $axios from '@/utils/$axios';
 
 export default function Page() {
@@ -27,50 +28,49 @@ export default function Page() {
   }, []);
 
   const [isExporting, setIsExporting] = useState<Error | boolean>(true);
+  // fix: avoid unexpected second invoking by debouncing within a magic period.
+  const exportExcel = useEvent(debounce(() => {
+    try {
+      const rows = [];
+      for (let i = 0; i < dataSource.data.length; ++i) {
+        const row: any[] = [];
+        const record = dataSource.data[i];
+        {{#each fields}}{{#unless (isNilorEmpty this.[1].$ui.title)}}{{#unless (isNilorEmpty this.[1].ref)}}
+        row.push(record["{{getForeignPropertyName this.[0]}}"]["{{getForeignFieldName this.[1].$ui.label}}"]);
+        {{else}}
+        row.push(record["{{this.[0]}}"]);
+        {{/unless}}{{/unless}}{{/each}}
+        rows.push(row);
+      }
+
+      const bordered = {border: {top:{style: "thin", color: "00000000"}, right:{style: "thin", color: "00000000"}, bottom:{style: "thin", color: "00000000"}, left:{style: "thin", color: "00000000"}}};
+      const workbook = XLSX.utils.book_new();
+      const header0 = [{{#each fields}}{{#unless (isNilorEmpty this.[1].$ui.title)}}, "{{this.[1].$ui.title}}"{{/unless}}{{/each}}].slice(1);
+      const worksheet = XLSX.utils.aoa_to_sheet([
+        header0.map((value) => ({ v: value, t: "s", s: { ...bordered, alignment: { horizontal: "center", vertical: "center", wrapText: false }, fill: { fgColor: { rgb: "FFCC00" } } }})),
+        ...rows.map((row) => row.map((col: any) => ({ v: col, t: "s", s: { ...bordered, alignment: { horizontal: "center", vertical: "center", wrapText: false } } })))
+      ]);
+      worksheet["!cols"] = [{}, {}, ...(header0.slice(2).map((col) => {
+        const { alphanumerics, wides } = groupBy(col, (char) => /[a-z0-9!@#$%^&*()_+=-]/i.test(char) ? "alphanumerics" : "wides");
+        return {
+          wch: Math.floor((alphanumerics || []).length + (wides || []).length * 2.5)
+        }
+      }))];
+      // worksheet["!merges"] = [
+      //   { s: { r: 0, c: 0 }, e: { r: 0, c: 1 } },
+      // ];
+      XLSX.utils.book_append_sheet(workbook, worksheet, "小组信息");
+      XLSX.writeFile(workbook, "小组信息.xlsx");
+      setIsExporting(false);
+    }
+    catch(e) {
+      setIsExporting(e as Error);
+    }
+  }, 80));
+
   useEffect(() => {
     if (!isLoading) {
-      try {
-        const rows = [];
-        for (let i = 0; i < dataSource.data.length; ++i) {
-          const row: any[] = [];
-          const record = dataSource.data[i];
-
-          {{#each fields}}
-          {{#unless (isNilorEmpty this.[1].$ui.title)}}
-          {{#unless (isNilorEmpty this.[1].ref)}}
-          row.push(record["{{getForeignPropertyName this.[0]}}"]["{{getForeignFieldName this.[1].$ui.label}}"]);
-          {{else}}
-          row.push(record["{{this.[0]}}"]);
-          {{/unless}}
-          {{/unless}}
-          {{/each}}
-
-          rows.push(row);
-        }
-
-        const bordered = {border: {top:{style: "thin", color: "00000000"}, right:{style: "thin", color: "00000000"}, bottom:{style: "thin", color: "00000000"}, left:{style: "thin", color: "00000000"}}};
-        const workbook = XLSX.utils.book_new();
-        const header0 = [{{#each fields}}{{#unless (isNilorEmpty this.[1].$ui.title)}}, "{{this.[1].$ui.title}}"{{/unless}}{{/each}}].slice(1);
-        const worksheet = XLSX.utils.aoa_to_sheet([
-          header0.map((value) => ({ v: value, t: "s", s: { ...bordered, alignment: { horizontal: "center", vertical: "center", wrapText: false }, fill: { fgColor: { rgb: "FFCC00" } } }})),
-          ...rows.map((row) => row.map((col: any) => ({ v: col, t: "s", s: { ...bordered, alignment: { horizontal: "center", vertical: "center", wrapText: false } } })))
-        ]);
-        worksheet["!cols"] = [{}, {}, ...(header0.slice(2).map((col) => {
-          const { alphanumerics, wides } = groupBy(col, (char) => /[a-z0-9!@#$%^&*()_+=-]/i.test(char) ? "alphanumerics" : "wides");
-          return {
-            wch: Math.floor((alphanumerics || []).length + (wides || []).length * 2.5)
-          }
-        }))];
-        // worksheet["!merges"] = [
-        //   { s: { r: 0, c: 0 }, e: { r: 0, c: 1 } },
-        // ];
-        XLSX.utils.book_append_sheet(workbook, worksheet, "小组信息");
-        XLSX.writeFile(workbook, "小组信息.xlsx");
-        setIsExporting(false);
-      }
-      catch(e) {
-        setIsExporting(e as Error);
-      }
+      exportExcel();
     }
   }, [isLoading]);
 

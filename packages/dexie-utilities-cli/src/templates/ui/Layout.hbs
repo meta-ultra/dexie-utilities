@@ -7,7 +7,7 @@ import { IoSearch } from "react-icons/io5";
 import { IoMdAddCircleOutline, IoMdRemoveCircleOutline } from "react-icons/io";
 import { TbDatabaseExport, TbDatabaseImport } from "react-icons/tb";
 import { useCache } from "@meta-ultra/cache";
-import { RouteModal } from '@/components/RouteModal'
+import { RouteModal } from '@/components/@meta-ultra/antd-plus';
 import $axios from "@/utils/$axios";
 import useTableColumns from "./useTableColumns";
 import useQueryForm from "./useQueryForm";
@@ -105,7 +105,10 @@ export default function Layout({children}: {children: ReactNode}) {
           <Col><Button onClick={onSearch} type="primary"><IoSearch size={20} className="inline-block relative -top-[2px] mr-2"/>查 询</Button></Col>
           <Col><Button onClick={() => navigate(`add`)}><IoMdAddCircleOutline size={20} className="inline-block relative -top-[2px] mr-2"/>新 增</Button></Col>
           <Col><Button onClick={() => navigate(`delete`, { state: {ids: selectedRowKeys} })} disabled={!hasSelected} danger><IoMdRemoveCircleOutline size={20} className="inline-block relative -top-[2px] mr-2"/>删 除</Button></Col>
-          <Col><Button onClick={() => navigate(`export`)}><TbDatabaseExport size={20} className="inline-block relative -top-[2px] mr-2"/>导 出</Button></Col>
+          <Col><Button onClick={() => {
+            const {page, pageSize, ...rest} = queries;
+            navigate(`export`, { state: {queries: rest} });
+          }}><TbDatabaseExport size={20} className="inline-block relative -top-[2px] mr-2"/>导 出</Button></Col>
           <Col><Button onClick={() => navigate(`import`)}><TbDatabaseImport size={20} className="inline-block relative -top-[2px] mr-2"/>导 入</Button></Col>
         </Row>
       </section>
