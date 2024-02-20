@@ -277,6 +277,7 @@ const generateUICode = (entities) => {
     code[`${pluralize(kebabCase(entityName))}/(route-modal)/loading.tsx`] = generateCodeOnFly("../templates/ui/RouteModalLoading.hbs", {entityName, fields, foreigns, many});
     code[`${pluralize(kebabCase(entityName))}/(route-modal)/delete/page.tsx`] = generateCodeOnFly("../templates/ui/DeletePage.hbs", {entityName, fields, foreigns, many});
     code[`${pluralize(kebabCase(entityName))}/(route-modal)/add/page.tsx`] = generateCodeOnFly("../templates/ui/AddPage.hbs", {entityName, fields, foreigns, many});
+    code[`${pluralize(kebabCase(entityName))}/(route-modal)/export/page.tsx`] = generateCodeOnFly("../templates/ui/ExportPage.hbs", {entityName, fields, foreigns, many});
     code[`${pluralize(kebabCase(entityName))}/(route-modal)/[id]/edit/page.tsx`] = generateCodeOnFly("../templates/ui/EditPage.hbs", {entityName, fields, foreigns, many});
   }
 

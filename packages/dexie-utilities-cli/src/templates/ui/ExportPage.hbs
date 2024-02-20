@@ -34,14 +34,23 @@ export default function Page() {
         for (let i = 0; i < dataSource.data.length; ++i) {
           const row: any[] = [];
           const record = dataSource.data[i];
-          row.push(record["name"]);
-          row.push(record["branch"]["name"]);
+
+          {{#each fields}}
+          {{#unless (isNilorEmpty this.[1].$ui.title)}}
+          {{#unless (isNilorEmpty this.[1].ref)}}
+          row.push(record["{{getForeignPropertyName this.[0]}}"]["{{getForeignFieldName this.[1].$ui.label}}"]);
+          {{else}}
+          row.push(record["{{this.[0]}}"]);
+          {{/unless}}
+          {{/unless}}
+          {{/each}}
+
           rows.push(row);
         }
 
         const bordered = {border: {top:{style: "thin", color: "00000000"}, right:{style: "thin", color: "00000000"}, bottom:{style: "thin", color: "00000000"}, left:{style: "thin", color: "00000000"}}};
         const workbook = XLSX.utils.book_new();
-        const header0 = ["名称", "所属支部"];
+        const header0 = [{{#each fields}}{{#unless (isNilorEmpty this.[1].$ui.title)}}, "{{this.[1].$ui.title}}"{{/unless}}{{/each}}].slice(1);
         const worksheet = XLSX.utils.aoa_to_sheet([
           header0.map((value) => ({ v: value, t: "s", s: { ...bordered, alignment: { horizontal: "center", vertical: "center", wrapText: false }, fill: { fgColor: { rgb: "FFCC00" } } }})),
           ...rows.map((row) => row.map((col: any) => ({ v: col, t: "s", s: { ...bordered, alignment: { horizontal: "center", vertical: "center", wrapText: false } } })))
