@@ -12,7 +12,7 @@ export default function Page() {
   const location = useLocation();
   const context = useRouteModalContext();
   const { isLoading, data: dataSource = {data: [], total: 0} } = useQuery<{data: any[], total: number}>({
-    queryKey: ["/api/groups", location.state && location.state.queries],
+    queryKey: ["/api/{{pluralizeKebabCase entityName}}", location.state && location.state.queries],
     queryFn: ({queryKey}) => $axios.get(queryKey[0] as string, {params: queryKey[1]})
   });
   
