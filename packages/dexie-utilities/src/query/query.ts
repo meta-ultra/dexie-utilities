@@ -47,7 +47,7 @@ const query = async <E = any>(
   params: Record<string, any>,
   page?: number,
   pageSize?: number,
-  sorter?: {field: string, order: "ascend" | "descend"},
+  sorter?: {field?: string, order?: "ascend" | "descend"},
   filter = defaultFilter
 ): Promise<{ total: number, data: E[] }> => {
   const [queryDirectKeys, queryNestedKeys] = groupQueryKeys(getQueryParams(params));
