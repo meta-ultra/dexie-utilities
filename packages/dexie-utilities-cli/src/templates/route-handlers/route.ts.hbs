@@ -146,7 +146,7 @@ export const POST = withValidation(
           await Promise.all(
             records.map(async (record) => {
               if (!await $table.where(record).count()) {
-                $table.add({...record});
+                await $table.add({...record});
               }
             })
           )
@@ -156,7 +156,7 @@ export const POST = withValidation(
       else {
         const record = singleBodySchemaOfPost.cast(json);
         /* Dexie START */
-        $table.add({...record});
+        await $table.add({...record});
         /* Dexie END */
       }
       return NextResponse.json({code: 0});
@@ -164,7 +164,7 @@ export const POST = withValidation(
     catch(e) {
       return NextResponse.json({
         code: 1,
-        error: e,
+        // error: e, // the error instance thrown from Dexie might be not able to serialized through JSON.stringify, uncomment this line if you're sure JSON.stringify(e) will not hit a new error.
         message: (e as {message?: string}).message,
       });
     }

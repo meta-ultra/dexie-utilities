@@ -26,44 +26,36 @@ export default function Layout({children}: {children: ReactNode}) {
   const cache = useCache();
 
   const columns = useTableColumns();
-  const [rawQueries, setRawQueries] = useState<Queries>({page: 1, pageSize: 10, ...(cache.get("{{pluralizeKebabCase tableName}}") || {})});
-  const queries = useMemo(() => {
-    return Object.entries(rawQueries).reduce((queries: any, [key, value]) => {
-      if (value !== undefined) {
-        queries[key] = value;
-      }
-      return queries;
-    }, {});
-  }, [rawQueries]);
+  const [queries, setQueries] = useState<Queries>({page: 1, pageSize: 10, ...(cache.get("{{pluralizeKebabCase tableName}}") || {})});
   const { isLoading, data: dataSource = {data: [], total: 0} } = useQuery<{data: any[], total: number}>({
     queryKey: ["/api/{{pluralizeKebabCase tableName}}", queries],
     queryFn: ({queryKey}) => $axios.get(queryKey[0] as string, {params: queryKey[1]})
   });
   const onTableChange = useEvent((pagination, filters, sorter, extra) => {
-    setRawQueries((rawQueries) => {
-      const newRawQueries = {
-        ...rawQueries,
+    setQueries((queries) => {
+      const newQueries = {
+        ...queries,
         page: pagination.current,
         pageSize: pagination.pageSize,
       };
       if (sorter.order) {
-        newRawQueries.sorter = {
+        newQueries.sorter = {
           field: sorter.field,
           order: sorter.order,
         };
       }
       else {
-        delete newRawQueries.sorter;
+        delete newQueries.sorter;
       }
-      return newRawQueries;
+      return newQueries;
     });
   });
 
   const [queryForm, queryFormRef] = useQueryForm(queries);
   const onSearch = useEvent(() => {
-    setRawQueries((rawQueries) => {
+    setQueries((queries) => {
       return {
-        ...rawQueries,
+        ...queries,
         ...queryFormRef.getFieldsValue(),
         page: 1,
       }

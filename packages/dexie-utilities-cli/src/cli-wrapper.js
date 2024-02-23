@@ -41,7 +41,7 @@ cli.option('--route-handlers-output [file]', 'The router file path', {
   default: './src/app/api',
 });
 cli.option('--ui-output [file]', 'The router file path', {
-  default: './src/app',
+  default: './src/app/(workspace)',
 });
 
 const parsed = cli.parse()
