@@ -1,116 +1,85 @@
-const { trim, isNumber } = require("lodash");
+const Nagging = require("./Nagging.js");
 const { tokenizeReference } = require("./utils.js");
+const { frame$Dexie, frame$DexieForeigns, frame$DexieMany } = require("./dexie/normalize.js");
+const { frame$RouteHandlers, frame$RouteHandlersForeigns, frame$RouteHandlersMany } = require("./route-handlers/normalize.js");
+const { frame$UI, frame$UIForeigns, frame$UIMany } = require("./ui/normalize.js");
 
-const TABLE_NAME_RE = /^[a-z][0-9a-z_-]*$/i;
-const FIELD_NAME_RE = /^[a-z][0-9a-z_-]*$/i;
+const nagging = new Nagging();
 
-function normalizeFieldType(field) {
-  if (/^(string|char)$/i.test(field.type)) {
-    field["$original-type"] = field.type;
-    field.type = "string";
-  }
-  else if (/^(number|int(eger)?|long|float|bigint|\d+(\.\d*)?)$/i.test(field.type)) {
-    field["$original-type"] = field.type;
-    field.type = "number";
-  }
-  else if (/^(bool(ean)?)$/i.test(field.type)) {
-    field["$original-type"] = field.type;
-    field.type = "boolean";
-  }
-  else if (/^(bool(ean)?|true|false)$/i.test(field.type)) {
-    field["$original-type"] = field.type;
-    field.type = "boolean";
-  }
-  else if (/^(date|datetime|time)$/i.test(field.type)) {
-    field["$original-type"] = field.type;
-    field.type = "Date";
-  }
-  else {
-    field["$original-type"] = field.type;
-    field.type = "any";
-  }
+function frame$Table(metadata, tableName, table) {
+  const $table = metadata[tableName]["$table"] = {};
+  $table.title = table.title;
 }
 
-function resolveReference(metadata, tableName, fieldName, condition, sTableName, sFieldName) {
-  const table = metadata[tableName];
-  if (!table) return;
-  const field = table.fields && table.fields[fieldName];
-  if (!field) return;
+function resolveForeignKey(metadata, sTableName, sColumnName, dTableName, dColumnName, dCondition) {
+  const { columns } = metadata[sTableName];
+  const column = columns[sColumnName];
 
-  const foreigns = metadata[tableName]["$foreigns"] = metadata[tableName]["$foreigns"] || [];
-  let ref = trim(field.ref || "");
+  const $foreigns = metadata[sTableName]["$foreigns"] = metadata[sTableName]["$foreigns"] || [];
+  let ref = column["foreign-key-references"];
   if (ref) {
-    const [foreignTableName, condition, foreignFieldName] = tokenizeReference(ref);
-    const foreignField = resolveReference(metadata, foreignTableName, foreignFieldName , condition, tableName, fieldName);
+    const [foreignTableName, foreignCondition, foreignColumnName] = tokenizeReference(ref);
+    const foreignColumn = resolveForeignKey(metadata, foreignTableName, foreignColumnName, sTableName, sColumnName, foreignCondition);
 
-    field.type = foreignField.type;
-    foreigns.push([fieldName, {
-      entityName: foreignTableName,
-      condition: foreignFieldName ? condition.replace(/^\(|\)$/g, "") : undefined,
-      fieldName: foreignFieldName ? foreignFieldName : condition,
+    column.type = foreignColumn.type;
+    $foreigns.push([sColumnName, {
+      foreignTableName,
+      foreignCondition,
+      foreignColumnName,
     }]);
   }
-  else {
+  else if (dTableName && dColumnName) {
     if (metadata[sTableName]) {
-      const many = metadata[tableName]["$many"] = metadata[tableName]["$many"] || [];
-      many.push([fieldName, {
-        entityName: sTableName,
-        fieldName: sFieldName,
-        manyCondition: condition,
+      const $many = metadata[sTableName]["$many"] = metadata[sTableName]["$many"] || [];
+      $many.push([sColumnName, {
+        manyTableName: dTableName,
+        manyCondition: dCondition,
+        manyColumnName: dColumnName,
       }]);
     }
     
-    return field;
+    return column;
   }
 }
 
-function normalizeUIProps(field, metdata) {
-  field["$ui"] = field["$ui"] || {};
-
-  field["$ui"].title = field["$ui"].title || field.title;
-  field["$ui"].required = field["$ui"].required || field.required || false;
-  field["$ui"].columnSorter = field["$ui"].columnSorter || true;
-  field["$ui"].columnWidth = field["$ui"].columnWidth || (field["$ui"].title ? field["$ui"].title.length * 80 : "undefined");
-  field["$ui"].columnAlign = field["$ui"].columnAlign || "center";
-
-  if (field.ref) {
-    const [foreignTableName, condition, foreignFieldName] = tokenizeReference(field.ref);
-    field["$ui"].title = field["$ui"].title || metdata[foreignTableName].title;
-    field["$ui"].controls = field["$ui"].controls || "Select";
-    field["$ui"].dataSource = field["$ui"].dataSource || foreignTableName;
-    field["$ui"].value = field["$ui"].value || [foreignTableName, foreignFieldName].join(".");
-    field["$ui"].label = field["$ui"].label || [foreignTableName, foreignFieldName].join(".");
-  }
-  else if (field.type === "Date") {
-    field["$ui"].controls = field["$ui"].controls || "DatePicker";
-  }
-  else if (field.type === "number") {
-    field["$ui"].controls = field["$ui"].controls || "InputNumber";
-    field["$ui"].min = isNumber(field.min) ? field.min : "undefined";
-    field["$ui"].max = isNumber(field.max) ? field.max : "undefined";
-    field["$ui"].precision = isNumber(field.precision) ? field.precision : "undefined";
-  }
-  else {
-    field["$ui"].controls = field["$ui"].controls || "Input";
-    field["$ui"].maxLength = field["$ui"].maxLength || "undefined";
-  }
-}
-
+const NAMING_CONVENTION_RE = /^[a-z][0-9a-z_]*$/i;
 function normalize(metadata) {
-  const tableNames = Object.keys(metadata).filter((name) => TABLE_NAME_RE.test(name));
-  for (const tableName of tableNames) {
-    const table = metadata[tableName];
-    const fieldNames = Object.keys(table.fields || {}).filter((name) => FIELD_NAME_RE.test(name));
-    for (const fieldName of fieldNames) {
-      resolveReference(metadata, tableName, fieldName);
-      normalizeFieldType(table.fields[fieldName]);
-      normalizeUIProps(table.fields[fieldName], metadata);
+  const tableNames = Object.keys(metadata).filter((name) => {
+    const result = NAMING_CONVENTION_RE.test(name);
+    if (!result) {
+      nagging.nag(`"${name}" does not align with the naming convention.`);
     }
+
+    return result;
+  });
+
+  for (const tableName of tableNames) {
+    const { table, columns, dexie = {}, ui = {}, yup = {}, mock = {} } = metadata[tableName];
+
+    // TODO: validate the structure of table, columns, dexie, ui and mock
+
+    frame$Table(metadata, tableName, table);
+    for (const columnName of Object.keys(columns)) {
+      // resolve foreign key to fulfill corresponding column definition
+      resolveForeignKey(metadata, tableName, columnName);
+
+      frame$Dexie(metadata, tableName, columnName, dexie, mock);
+      frame$RouteHandlers(metadata, tableName, columnName, dexie, yup);
+      frame$UI(metadata, tableName, columnName, ui, yup);
+    }
+  }
+
+  // Note that, the followings must be called after invoking resolveForeignKey on each table.
+  for (const tableName of tableNames) {
+    frame$DexieForeigns(metadata, tableName);
+    frame$DexieMany(metadata, tableName);
+    frame$RouteHandlersForeigns(metadata, tableName);
+    frame$RouteHandlersMany(metadata, tableName);
+    frame$UIForeigns(metadata, tableName);
+    frame$UIMany(metadata, tableName);
   }
 
   return metadata;
 }
 
-module.exports = {
-  normalize
-};
+module.exports = normalize;

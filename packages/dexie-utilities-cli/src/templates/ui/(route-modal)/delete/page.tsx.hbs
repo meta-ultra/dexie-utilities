@@ -14,7 +14,7 @@ export default function Page() {
   const { message } = usePopup();
   const mutation = useMutation({
     mutationFn() {
-      return $axios.delete(`/api/{{pluralizeKebabCase entityName}}`, {params: {ids: location.state.ids}});
+      return $axios.delete(`/api/{{pluralizeKebabCase tableName}}`, {params: {ids: location.state.ids}});
     }
   });
 

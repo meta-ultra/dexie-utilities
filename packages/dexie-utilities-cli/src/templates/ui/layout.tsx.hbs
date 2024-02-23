@@ -26,7 +26,7 @@ export default function Layout({children}: {children: ReactNode}) {
   const cache = useCache();
 
   const columns = useTableColumns();
-  const [rawQueries, setRawQueries] = useState<Queries>({page: 1, pageSize: 10, ...(cache.get("{{pluralizeKebabCase entityName}}") || {})});
+  const [rawQueries, setRawQueries] = useState<Queries>({page: 1, pageSize: 10, ...(cache.get("{{pluralizeKebabCase tableName}}") || {})});
   const queries = useMemo(() => {
     return Object.entries(rawQueries).reduce((queries: any, [key, value]) => {
       if (value !== undefined) {
@@ -36,7 +36,7 @@ export default function Layout({children}: {children: ReactNode}) {
     }, {});
   }, [rawQueries]);
   const { isLoading, data: dataSource = {data: [], total: 0} } = useQuery<{data: any[], total: number}>({
-    queryKey: ["/api/{{pluralizeKebabCase entityName}}", queries],
+    queryKey: ["/api/{{pluralizeKebabCase tableName}}", queries],
     queryFn: ({queryKey}) => $axios.get(queryKey[0] as string, {params: queryKey[1]})
   });
   const onTableChange = useEvent((pagination, filters, sorter, extra) => {
@@ -71,13 +71,13 @@ export default function Layout({children}: {children: ReactNode}) {
   });
 
   useEffect(() => {
-    cache.set("{{pluralizeKebabCase entityName}}", queries);
+    cache.set("{{pluralizeKebabCase tableName}}", queries);
   }, [queries]);
 
   useEffect(() => {
     if (!RouteModalRoutes.find((re) => re.test(location.pathname))) {
       queryClient.invalidateQueries({
-        queryKey: ["/api/{{pluralizeKebabCase entityName}}"]
+        queryKey: ["/api/{{pluralizeKebabCase tableName}}"]
       });
     }
   }, [location.pathname, queryClient]);

@@ -8,21 +8,21 @@ export default function useTableColumns() {
 
   const columns = useMemo(() => {
     return [
-      {{#each fields}}
-      {{#unless (isNilorEmpty this.[1].$ui.title)}}
-      { title: "{{this.[1].$ui.title}}", dataIndex: "{{this.[0]}}", key: "{{this.[0]}}", sorter: {{this.[1].$ui.columnSorter}}, align: "{{this.[1].$ui.columnAlign}}", width: {{this.[1].$ui.columnWidth}}, 
+      {{#each $ui}}
+      {{#unless (isNilorEmpty this.title)}}
+      { title: "{{this.title}}", dataIndex: "{{@key}}", key: "{{@key}}", sorter: {{this.table-column.sorter}}, align: "{{this.table-column.align}}" as "{{this.table-column.align}}", width: {{this.table-column.width}}, 
         render(value: any, record: any) {
-        {{#unless (isNilorEmpty this.[1].ref)}}
-          return record["{{getForeignPropertyName this.[0]}}"]["{{getForeignFieldName this.[1].$ui.label}}"];
+        {{#if this.isRef}}
+          return record["{{getForeignPropertyName @key}}"]["{{getForeignFieldName this.label}}"];
         {{else}}
           return value;
-        {{/unless}}
+        {{/if}}
         }
       },
       {{/unless}}
       {{/each}}
 
-      { key: "action", fixed: "right", width: 150, align: "center", render(_: any, record: any) {
+      { key: "action", fixed: "right" as "right", width: 150, align: "center" as "center", render(_: any, record: any) {
         return (
           <Space size="middle">
             <a onClick={() => navigate(`${record.id}/edit`)}><AiOutlineEdit className='inline-block relative -top-[2px]' size={16}/> 修 改</a>

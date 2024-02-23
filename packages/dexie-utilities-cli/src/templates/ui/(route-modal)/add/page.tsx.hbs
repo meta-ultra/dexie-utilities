@@ -1,18 +1,18 @@
 import { useEffect } from 'react'
-import { Button, Form, Row, Col, {{getControlsNamedImports fields}} } from "antd";
+import { Button, Form, Row, Col, {{getControlsNamedImports $ui}} } from "antd";
 import { useMutation, useSuspenseQuery } from '@tanstack/react-query';
 import useEvent from 'react-use-event-hook';
 import { useRouteModalContext } from '@/components/@meta-ultra/antd-plus';
 import { usePopup } from '@/utils/PopupContext';
 import $axios from '@/utils/$axios';
-{{#unless (isNilorEmpty foreigns)}}
+{{#unless (isNilorEmpty $ui-foreigns)}}
 import { isArray, isNumber } from "lodash-es";
 {{/unless }}
 
 export default function Page() {
-  {{#each foreigns}}
-  const {data: {{getForeignPropertyName this.[0]~}} } = useSuspenseQuery({
-    queryKey: [`/api/{{pluralizeKebabCase this.[1].entityName}}`, {{{this.[1].condition}}}],
+  {{#each $ui-foreigns}}
+  const {data: {{pluralize (getForeignPropertyName this.[0])~}} } = useSuspenseQuery({
+    queryKey: [`/api/{{pluralizeKebabCase this.[1].foreignTableName}}`, {{{this.[1].foreignCondition}}}],
     async queryFn({queryKey}) {
       const res: {total: number, data: any[]} | any[] = await $axios.get(queryKey[0] as string, {params: queryKey[1] || {}});
       if (isArray(res)) {
@@ -30,7 +30,7 @@ export default function Page() {
   const [formRef] = Form.useForm();
   const mutation = useMutation({
     mutationFn() {
-      return $axios.post(`/api/{{pluralizeKebabCase entityName}}`, formRef.getFieldsValue());
+      return $axios.post(`/api/{{pluralizeKebabCase tableName}}`, formRef.getFieldsValue());
     }
   });
 
@@ -57,7 +57,7 @@ export default function Page() {
   useEffect(() => {
     if (context) {
       context.setModalProps({
-        title: "新增信息",
+        title: "新增{{$table.title}}信息",
         width: "80%",
         footer: [
           <Button key="cancel" onClick={context.navigateBack}>取 消</Button>,
@@ -71,11 +71,11 @@ export default function Page() {
     <div>
       <Form form={formRef}>
         <Row gutter={16}>
-          {{#each fields}}
-          {{#unless (isNilorEmpty this.[1].$ui.title)}}
+          {{#each $ui}}
+          {{#unless (isNilorEmpty this.title)}}
           <Col span={6}>
-            <Form.Item label={"{{this.[1].$ui.title}}"} name={"{{this.[0]}}"} rules={[{required: {{this.[1].$ui.required~}} }]}>
-              {{getQueryFormControls this}}
+            <Form.Item label={"{{this.title}}"} name={"{{@key}}"} rules={[{required: {{this.required~}} }]}>
+              {{getQueryFormControls @key this}}
             </Form.Item>
           </Col>
           {{/unless}}

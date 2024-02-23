@@ -1,12 +1,12 @@
 import { type NextRequest, type NextContext, NextResponse, objectify, withValidation } from "@meta-ultra/app-router";
 import * as yup from "yup";
-import { db, I{{~upperCamelCase entityName~}}TableName{{#unless (isNilorEmpty foreigns)}}, {{upperCamelCase entityName}}{{/unless}} } from "{{databasePackage}}";
+import { db, I{{~upperCamelCase tableName~}}TableName{{#unless (isNilorEmpty $route-handlers-foreigns)}}, {{upperCamelCase tableName}}{{/unless}} } from "{{databasePackage}}";
 
-const $table = db[I{{~upperCamelCase entityName~}}TableName];
+const $table = db[I{{~upperCamelCase tableName~}}TableName];
 
 const paramsSchemaOfGet = yup.object({
-  {{#each fields}}
-  {{this.[0]~}}: yup.{{~frameYupSchema this.[1]~}},
+  {{#each $route-handlers}}
+  {{@key~}}: yup.{{~frameRouteHandlersYupSchema this~}},
   {{/each}}
 });
 export const GET = withValidation(
@@ -15,17 +15,18 @@ export const GET = withValidation(
     try {
       const params = paramsSchemaOfGet.cast(context.params);
       /* Dexie START */
-      const data = await $table.get(params){{#unless (isNilorEmpty foreigns)}} as {{upperCamelCase entityName}} | undefined{{/unless}};
-      {{#unless (isNilorEmpty foreigns)}}
+      const data = await $table.get(params){{#unless (isNilorEmpty $route-handlers-foreigns)}} as {{upperCamelCase tableName}} | undefined{{/unless}};
+      {{#unless (isNilorEmpty $route-handlers-foreigns)}}
       if (data) {
         await Promise.all([
-          {{#each foreigns}}
-          await data.load{{upperCamelCase (nameForignField this.[0] this.[1].fieldName)}}(),
+          {{#each $route-handlers-foreigns}}
+          await data.load{{upperCamelCase (getForeignPropertyName this.[0])}}(),
           {{/each}}
         ]);
       }
       {{/unless}}
       /* Dexie END */
+
 
       return NextResponse.json({
         code: 0,
@@ -41,13 +42,15 @@ export const GET = withValidation(
     }
   }
 );
-
+ 
 const paramsSchemaOfPut = yup.object({
-  {{#with (getPrimaryField fields)}}id: yup.{{~frameYupSchema this.[1] true~}}{{/with}}.required()
+  {{#each (getRouteHandlersPrimaryKeys $route-handlers)}}
+  {{@key}}: yup.{{~frameRouteHandlersYupSchema this true~}}.required(),
+  {{/each}}
 });
 const bodySchemaOfPut = yup.object({
-  {{#each fields}}
-  {{this.[0]~}}: yup.{{~frameYupSchema this.[1]~}},
+  {{#each $route-handlers}}
+  {{@key~}}: yup.{{~frameRouteHandlersYupSchema this~}},
   {{/each}}
 });
 export const PUT = withValidation(
@@ -60,7 +63,9 @@ export const PUT = withValidation(
       const params = paramsSchemaOfPut.cast(context.params);
       const data = bodySchemaOfPut.cast(await request.json());
       /* Dexie START */
-      await $table.update(params.id, data);
+      {{#each (getRouteHandlersPrimaryKeys $route-handlers)}}
+      await $table.update(params.{{@key}}, data);
+      {{/each}}
       /* Dexie END */
       return NextResponse.json({ code: 0 });
     }

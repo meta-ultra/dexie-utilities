@@ -7,14 +7,14 @@ import * as XLSX from "xlsx-js-style";
 import { useRouteModalContext } from '@/components/@meta-ultra/antd-plus';
 import { usePopup } from '@/utils/PopupContext';
 import $axios from '@/utils/$axios';
-import { {{#unless (isNilorEmpty foreigns)}}isArray, isNumber, {{/unless}}differenceWith, isEqual, groupBy } from "lodash-es";
+import { {{#unless (isNilorEmpty $ui-foreigns)}}isArray, isNumber, {{/unless}}differenceWith, isEqual, groupBy } from "lodash-es";
 import useTableColumns from './useTableColumns';
 import styles from "./styles.module.css";
 
 export default function Page() {
-  {{#each foreigns}}
-  const {data: {{getForeignPropertyName this.[0]~}} } = useSuspenseQuery({
-    queryKey: [`/api/{{pluralizeKebabCase this.[1].entityName}}`, {{{this.[1].condition}}}],
+  {{#each $ui-foreigns}}
+  const {data: {{pluralize (getForeignPropertyName this.[0])~}} } = useSuspenseQuery({
+    queryKey: [`/api/{{pluralizeKebabCase this.[1].foreignTableName}}`, {{{this.[1].foreignCondition}}}],
     async queryFn({queryKey}) {
       const res: {total: number, data: any[]} | any[] = await $axios.get(queryKey[0] as string, {params: queryKey[1] || {}});
       if (isArray(res)) {
@@ -37,7 +37,7 @@ export default function Page() {
         ...formRef.getFieldsValue()
       }));
 
-      return $axios.post(`/api/groups`, data);
+      return $axios.post(`/api/{{pluralizeKebabCase tableName}}`, data);
     }
   });
 
@@ -78,7 +78,7 @@ export default function Page() {
   const downloadTemplate = useEvent(() => {
     const bordered = {border: {top:{style: "thin", color: "00000000"}, right:{style: "thin", color: "00000000"}, bottom:{style: "thin", color: "00000000"}, left:{style: "thin", color: "00000000"}}};
     const workbook = XLSX.utils.book_new();
-    const header0 = [{{#each fields}}{{#unless (isNilorEmpty this.[1].$ui.title)}}{{#if (isNilorEmpty this.[1].ref)}}, "{{this.[1].$ui.title}}"{{/if}}{{/unless}}{{/each}}].slice(1);
+    const header0 = [{{#each $ui}}{{#unless (isNilorEmpty this.title)}}{{#unless this.isRef}}, "{{this.title}}"{{/unless}}{{/unless}}{{/each}}].slice(1);
     const worksheet = XLSX.utils.aoa_to_sheet([
       header0.map((value) => ({ v: value, t: "s", s: { ...bordered, alignment: { horizontal: "center", vertical: "center", wrapText: false }, fill: { fgColor: { rgb: "FFCC00" } } }})),
     ]);
@@ -88,8 +88,8 @@ export default function Page() {
         wch: Math.floor((alphanumerics || []).length + (wides || []).length * 2.5)
       }
     }))];
-    XLSX.utils.book_append_sheet(workbook, worksheet, "小组信息");
-    XLSX.writeFile(workbook, "小组信息导入模板.xlsx");
+    XLSX.utils.book_append_sheet(workbook, worksheet, "{{$table.title}}信息");
+    XLSX.writeFile(workbook, "{{$table.title}}信息导入模板.xlsx");
   })
   /* Excel Template START */
 
@@ -107,14 +107,14 @@ export default function Page() {
     <div>
       <Form form={formRef}>
         <Row gutter={16}>
-          {{#each fields}}
-          {{#unless (isNilorEmpty this.[1].ref)}}
+          {{#each $ui}}
+          {{#if this.isRef}}
           <Col span={6}>
-            <Form.Item label={"{{this.[1].$ui.title}}"} name={"{{this.[0]}}"} rules={[{required: {{this.[1].$ui.required~}} }]}>
-              {{getQueryFormControls this}}
+            <Form.Item label={"{{this.title}}"} name={"{{@key}}"} rules={[{required: {{this.required~}} }]}>
+              {{getQueryFormControls @key this}}
             </Form.Item>
           </Col>
-          {{/unless}}
+          {{/if}}
           {{/each}}
           <Col span={12}>
             <Form.Item>
@@ -143,8 +143,8 @@ export default function Page() {
                             for (let i = 0; i < array.length; i++) {
                               const cols = Object.values(array[i] as object);
                               let idx = 0;
-                              let record: any = { {{#each fields}}{{#unless (isNilorEmpty this.[1].$ui.title)}}{{#if (isNilorEmpty this.[1].ref)}}
-                                {{this.[0]}}: cols[idx++], {{/if}}{{/unless}}{{/each}}
+                              let record: any = { {{#each $ui}}{{#unless (isNilorEmpty this.title)}}{{#unless this.isRef}}
+                                {{@key}}: cols[idx++], {{/unless}}{{/unless}}{{/each}}
                               };
                               // deduplicate
                               record = differenceWith([record], records, isEqual)[0];
@@ -162,6 +162,8 @@ export default function Page() {
                             const lastRecord = dataSource.data[dataSource.data.length - 1] as undefined | {id: number};
                             const startId = lastRecord && !isNaN(lastRecord.id) ? lastRecord.id + 1 : 0;
                             records = records.map((record, i) => ({id: startId + i, ...record}));
+
+                            message.success(`成功导入${records.length}条记录`);
                             
                             setDataSource(({data}) => ({
                               data: data.concat(records)

@@ -1,9 +1,9 @@
-export const I{{~upperCamelCase entityName~}}TableName = "{{getTableName entityName}}";
-export const I{{~upperCamelCase entityName~}}Schema = "{{getIndexes fields}}";
-export type I{{~upperCamelCase entityName~}}KeyType = {{{getKeyType fields}}};
+export const I{{~upperCamelCase tableName~}}TableName = "{{tableName}}";
+export const I{{~upperCamelCase tableName~}}Schema = "{{getDexieSchema $dexie}}";
+export type I{{~upperCamelCase tableName~}}KeyType = {{{getDexiePrimaryKeyType $dexie}}};
 
-export interface I{{~upperCamelCase entityName}} {
-  {{#each fields}}
-    {{this.[0]}}{{#unless this.[1].required}}?{{/unless}}: {{this.[1].type}};
+export interface I{{~upperCamelCase tableName}} {
+  {{#each $dexie}}
+    {{@key}}{{#unless this.required}}?{{/unless}}: {{this.type}};
   {{/each}}
 }

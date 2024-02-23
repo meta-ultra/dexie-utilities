@@ -1,18 +1,18 @@
 import Dexie, { type Table } from 'dexie';
-{{#each entities}}
-import { type I{{~upperCamelCase this.[0]~}}, I{{~upperCamelCase this.[0]~}}TableName, I{{~upperCamelCase this.[0]~}}Schema, I{{~upperCamelCase this.[0]~}}KeyType, {{upperCamelCase this.[0]}}, populateI{{~upperCamelCase this.[0]}} } from './entities/I{{~upperCamelCase this.[0]~}}';
+{{#each metadata}}
+import { type I{{~upperCamelCase @key~}}, I{{~upperCamelCase @key~}}TableName, I{{~upperCamelCase @key~}}Schema, I{{~upperCamelCase @key~}}KeyType, {{upperCamelCase @key}}, populateI{{~upperCamelCase @key}} } from './entities/I{{~upperCamelCase @key~}}';
 {{/each}}
 
 export class ApplicationDexie extends Dexie {
-  {{#each entities}}
-  [I{{~upperCamelCase this.[0]~}}TableName]!: Table<I{{~upperCamelCase this.[0]~}}, I{{~upperCamelCase this.[0]~}}KeyType>;
+  {{#each metadata}}
+  [I{{~upperCamelCase @key~}}TableName]!: Table<I{{~upperCamelCase @key~}}, I{{~upperCamelCase @key~}}KeyType>;
   {{/each}}
 
   constructor() {
     super("applicationDatabase");
     this.version(1).stores({
-      {{#each entities}}
-      [I{{~upperCamelCase this.[0]~}}TableName]: I{{~upperCamelCase this.[0]~}}Schema,
+      {{#each metadata}}
+      [I{{~upperCamelCase @key~}}TableName]: I{{~upperCamelCase @key~}}Schema,
       {{/each}}
     });
   }
@@ -20,15 +20,15 @@ export class ApplicationDexie extends Dexie {
 
 export const db = new ApplicationDexie();
 
-{{#each entities}}
-db[I{{~upperCamelCase this.[0]~}}TableName].mapToClass({{~upperCamelCase this.[0]~}});
+{{#each metadata}}
+db[I{{~upperCamelCase @key~}}TableName].mapToClass({{~upperCamelCase @key~}});
 {{/each}}
 
 const populate = async function populate(this: ApplicationDexie) {
-  console.info("[@meta-ultra/app-router] population is done.");
+  console.info("[@meta-ultra] Dexie population is done.");
 
-  {{#each entities}}
-  await populateI{{~upperCamelCase this.[0]~}}(this);
+  {{#each metadata}}
+  await populateI{{~upperCamelCase @key~}}(this);
   {{/each}}
 }.bind(db);
 db.on("populate", () => populate());

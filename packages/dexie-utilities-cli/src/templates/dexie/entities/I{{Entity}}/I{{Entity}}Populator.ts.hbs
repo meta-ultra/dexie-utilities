@@ -1,12 +1,12 @@
 import { type ApplicationDexie } from "../../db";
-import { I{{~upperCamelCase entityName~}}TableName } from "./I{{~upperCamelCase entityName~}}";
+import { I{{~upperCamelCase tableName~}}TableName } from "./I{{~upperCamelCase tableName~}}";
 import { mock, Random } from "mockjs";
 
-export async function populateI{{~upperCamelCase entityName~}}(db: ApplicationDexie) {
-  const $table = db[I{{~upperCamelCase entityName~}}TableName];
+export async function populateI{{~upperCamelCase tableName~}}(db: ApplicationDexie) {
+  const $table = db[I{{~upperCamelCase tableName~}}TableName];
   await $table.clear();
 
-  const data = [];
+  const data: any[] = [];
 
   await $table.bulkAdd(data);
 }
