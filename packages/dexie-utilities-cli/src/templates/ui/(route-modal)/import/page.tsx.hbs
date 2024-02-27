@@ -111,7 +111,7 @@ export default function Page() {
           {{#if this.isRef}}
           <Col span={6}>
             <Form.Item label={"{{this.title}}"} name={"{{@key}}"} rules={[{required: {{this.required~}} }]}>
-              {{getQueryFormControls @key this}}
+              {{getFormControls @key this}}
             </Form.Item>
           </Col>
           {{/if}}

@@ -2,7 +2,7 @@ const Nagging = require("./Nagging.js");
 const { tokenizeReference } = require("./utils.js");
 const { frame$Dexie, frame$DexieForeigns, frame$DexieMany } = require("./dexie/normalize.js");
 const { frame$RouteHandlers, frame$RouteHandlersForeigns, frame$RouteHandlersMany } = require("./route-handlers/normalize.js");
-const { frame$UI, frame$UIForeigns, frame$UIMany } = require("./ui/normalize.js");
+const { frame$UI, frame$UIForeigns, frame$UIMany, sort$UI } = require("./ui/normalize.js");
 
 const nagging = new Nagging();
 
@@ -54,7 +54,7 @@ function normalize(metadata) {
   });
 
   for (const tableName of tableNames) {
-    const { table, columns, dexie = {}, ui = {}, yup = {}, mock = {} } = metadata[tableName];
+    const { table, columns, dexie = {}, ui = {}, yup = {} } = metadata[tableName];
 
     // TODO: validate the structure of table, columns, dexie, ui and mock
 
@@ -63,7 +63,7 @@ function normalize(metadata) {
       // resolve foreign key to fulfill corresponding column definition
       resolveForeignKey(metadata, tableName, columnName);
 
-      frame$Dexie(metadata, tableName, columnName, dexie, mock);
+      frame$Dexie(metadata, tableName, columnName, dexie);
       frame$RouteHandlers(metadata, tableName, columnName, dexie, yup);
       frame$UI(metadata, tableName, columnName, ui, yup);
     }
@@ -77,6 +77,7 @@ function normalize(metadata) {
     frame$RouteHandlersMany(metadata, tableName);
     frame$UIForeigns(metadata, tableName);
     frame$UIMany(metadata, tableName);
+    sort$UI(metadata, tableName);
   }
 
   return metadata;

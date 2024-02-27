@@ -33,6 +33,7 @@ function generateDexieCode(metadata) {
             $dexie: tableMetadata.$dexie,
             "$dexie-foreigns": tableMetadata["$dexie-foreigns"],
             "$dexie-many": tableMetadata["$dexie-many"],
+            "initial": JSON.stringify(tableMetadata["initial"] || []),
           }
         );
       }

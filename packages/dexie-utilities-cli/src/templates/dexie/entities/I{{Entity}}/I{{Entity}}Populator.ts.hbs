@@ -6,7 +6,7 @@ export async function populateI{{~upperCamelCase tableName~}}(db: ApplicationDex
   const $table = db[I{{~upperCamelCase tableName~}}TableName];
   await $table.clear();
 
-  const data: any[] = [];
+  const data: any[] = mock({{{initial}}});
 
   await $table.bulkAdd(data);
 }

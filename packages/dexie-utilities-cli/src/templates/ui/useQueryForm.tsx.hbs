@@ -27,13 +27,13 @@ export default function useQueryForm(queries?: Record<string, any>): [ReactNode,
     <Form form={form}>
       <Row gutter={16}>
         {{#each $ui}}
-        {{#unless (isNilorEmpty this.controls)}}
-        <Col span={6}>
+        {{#if (isAvailableQueryFormControls this.controls)}}
+        <Col span={ {{~getColSpan this.controls~}} }>
           <Form.Item label={"{{this.title}}"} name={"{{@key}}"}>
-            {{getQueryFormControls @key this}}
+            {{getFormControls @key this}}
           </Form.Item>
         </Col>
-        {{/unless}}
+        {{/if}}
         {{/each}}
       </Row>
     </Form>

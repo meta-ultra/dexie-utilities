@@ -84,9 +84,9 @@ export default function Page({params}: {params: {id: string}}) {
         <Row gutter={16}>
           {{#each $ui}}
           {{#unless (isNilorEmpty this.title)}}
-          <Col span={6}>
+          <Col span={ {{~getColSpan this.controls~}} }>
             <Form.Item label={"{{this.title}}"} name={"{{@key}}"} rules={[{required: {{this.required~}} }]}>
-              {{getQueryFormControls @key this}}
+              {{getFormControls @key this}}
             </Form.Item>
           </Col>
           {{/unless}}

@@ -91,7 +91,7 @@ export default function Layout({children}: {children: ReactNode}) {
 
   return (
     <section className="m-1">
-      <section className="rounded mb-2 p-5 shadow-[1px_1px_5px_0px_#cdcdcd]">
+      <section className="bg-card rounded mb-2 p-5 shadow-[1px_1px_5px_0px_#cdcdcd]">
         {queryForm}
         <Row justify={"end"} gutter={16}>
           <Col><Button onClick={onSearch} type="primary"><IoSearch size={20} className="inline-block relative -top-[2px] mr-2"/>查 询</Button></Col>
@@ -104,7 +104,7 @@ export default function Layout({children}: {children: ReactNode}) {
           <Col><Button onClick={() => navigate(`import`)}><TbDatabaseImport size={20} className="inline-block relative -top-[2px] mr-2"/>导 入</Button></Col>
         </Row>
       </section>
-      <section className="rounded mt-1 mb-2 p-5 shadow-[1px_1px_5px_0px_#cdcdcd]">
+      <section className="bg-card rounded mt-1 mb-2 p-5 shadow-[1px_1px_5px_0px_#cdcdcd]">
         { 
           hasSelected 
           ? (

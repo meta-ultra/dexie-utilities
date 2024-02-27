@@ -31,7 +31,7 @@ function frame$DexieMany(metadata, tableName) {
  * Limitations: 
  * 1. Compound indexes is not supported at the moment.
  */
-function frame$Dexie(metadata, tableName, columnName, dexie, mock) {
+function frame$Dexie(metadata, tableName, columnName, dexie) {
   const column = metadata[tableName].columns[columnName];
   const $dexie = metadata[tableName]["$dexie"] = metadata[tableName]["$dexie"] || {};
   $dexie[cvtColumnName2TSPropName(columnName)] = {

@@ -1,5 +1,5 @@
-const { isAbsolute, join, sep, dirname } = require("node:path")
-const { createReadStream, writeFile, mkdir } = require("node:fs")
+const { isAbsolute, join, sep, dirname, basename } = require("node:path")
+const { createReadStream, writeFile, mkdir, statSync, existsSync } = require("node:fs")
 const toml = require("@ltd/j-toml");
 const concat = require("concat-stream");
 const cac = require('cac')
@@ -9,6 +9,8 @@ const { format } = require("prettier"); // https://prettier.io/docs/en/api.html
 const normalize = require("./core/normalize.js");
 const generateCode = require("./core/generateCode.js");
 const outputCode = require("./core/outputCode.js");
+const { globSync } = require("glob");
+const { splashify } = require("./core/utils.js");
 
 const cli = cac('meta-ultra');
 
@@ -29,7 +31,7 @@ cli.option('--watch-aggregate-timeout [timeout]', 'Add a delay(ms) before rebuil
 // })
 cli.option('--filter [regexp]', 'The app folder path');
 cli.option('--source, -s [folder]', 'The app folder path', {
-  default: './src/metadata.toml',
+  default: './metadata',
 });
 cli.option('--db-output [file]', 'The router file path', {
   default: './src/db',
@@ -54,16 +56,46 @@ if (!parsed.options.h && !parsed.options.v) {
   const databasePackage =  parsed.options.dbPackage || "@/db";
 
   const main = async () => {
-    createReadStream(join(sourcePath), 'utf8').pipe(concat(async function(data) {
-      var metadata = toml.parse(data, { bigint: false });
-      normalize(metadata);
-      const { dexie, routeHandlers, ui } = generateCode(metadata, databasePackage);
-      await Promise.all([
-        outputCode(dbOutputPath, dexie),
-        outputCode(routeHandlersOutputPath, routeHandlers),
-        outputCode(uiOutputPath, ui),
-      ]);
-    }));
+    if (!existsSync(join(sourcePath))) {
+      throw `Source "${sourcePath}" is not found.`;
+    }
+
+    let metadata = {};
+    if (statSync(join(sourcePath)).isDirectory()) {
+      const tomlPaths = globSync(splashify(join(sourcePath, "*.toml")));
+      const kvs = await Promise.all(
+        tomlPaths.map(async (tomlPath) => {
+          const name = basename(tomlPath).replace(/\.toml$/, "");
+          return new Promise((resolve) => {
+            createReadStream(tomlPath, 'utf8').pipe(concat(async function(data) {
+              var metadata = toml.parse(data, { bigint: false });
+              resolve([name, metadata]);
+            }));
+          });
+        })
+      );
+      metadata = kvs.reduce((metadata, [k, v]) => {
+        metadata[k] = v;
+        return metadata;
+      }, {});
+    }
+    else {
+      medata = await new Promise((resolve) => {
+        createReadStream(join(sourcePath), 'utf8').pipe(concat(async function(data) {
+          var metadata = toml.parse(data, { bigint: false });
+          resolve(metadata);
+        }));
+      });
+    }
+
+    normalize(metadata);
+    // console.log(JSON.stringify(metadata["user"]["$ui"], null, 2));
+    const { dexie, routeHandlers, ui } = generateCode(metadata, databasePackage);
+    await Promise.all([
+      outputCode(dbOutputPath, dexie),
+      outputCode(routeHandlersOutputPath, routeHandlers),
+      outputCode(uiOutputPath, ui),
+    ]);
 
     if (cli.options.watch) {
       console.log('meta-ultra is running.');
