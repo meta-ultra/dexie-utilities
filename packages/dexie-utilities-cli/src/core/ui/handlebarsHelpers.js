@@ -3,7 +3,7 @@ const { tokenizeReference } = require("../utils.js");
 const { pluralize, getForeignPropertyName, isNil, isNilorEmpty } = require("../commonHandlebarsHelpers.js");
 const { isEmpty } = require("lodash");
 
-const getControlsNamedImports = ($ui) => {
+const getAntdControlsNamedImports = ($ui) => {
   const set = new Set();
   for (const item of Object.values($ui)) {
     if (item.controls && /^antd$/i.test(item.controls.package)) {
@@ -11,6 +11,26 @@ const getControlsNamedImports = ($ui) => {
     }
   }
   return Array.from(set).join(", ");
+};
+
+const getAdditionalPackageControlsNamedImports = ($ui) => {
+  const map = new Map();
+  for (const item of Object.values($ui)) {
+    if (item.controls && !/^antd$/i.test(item.controls.package)) {
+      if (!map.has(item.controls.package)) {
+        map.set(item.controls.package, new Set());
+      }
+      const set = map.get(item.controls.package);
+      set.add(item.controls.type.split(".")[0]);
+    }
+  }
+
+  const result = {};
+  for (const [package, namedImportSet] of map.entries()) {
+    result[package] = Array.from(namedImportSet).join(", ");
+  }
+
+  return result;
 };
 
 /**
@@ -89,7 +109,8 @@ const getForeignFieldName = (ref) => {
 };
 
 module.exports = {
-  getControlsNamedImports,
+  getAntdControlsNamedImports,
+  getAdditionalPackageControlsNamedImports,
   getFormControls,
   getForeignFieldName,
   isAvailableQueryFormControls,

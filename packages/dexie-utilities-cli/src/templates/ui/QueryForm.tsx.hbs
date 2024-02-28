@@ -1,5 +1,8 @@
 import { forwardRef, useEffect, useImperativeHandle } from 'react';
-import { type FormInstance, Form, Row, Col, {{getControlsNamedImports $ui}} } from "antd";
+import { type FormInstance, Form, Row, Col, {{getAntdControlsNamedImports $ui}} } from "antd";
+{{#each (getAdditionalPackageControlsNamedImports $ui)}}
+import { {{this}} } from "{{@key}}";
+{{/each}}
 {{#unless (isNilorEmpty $ui-foreigns)}}
 import { isArray, isNumber } from "lodash-es";
 import { useSuspenseQuery } from "@tanstack/react-query";
@@ -34,7 +37,7 @@ export default forwardRef<FormInstance, QueryFormProps>(({initialQueries}, ref) 
   {{/each}}
 
   return (
-    <Form form={form}>
+    <Form form={form} autocomplete="off">
       <Row gutter={16}>
         {{#each $ui}}
         {{#if (isAvailableQueryFormControls this.controls)}}
