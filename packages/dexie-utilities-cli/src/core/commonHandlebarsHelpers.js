@@ -6,8 +6,17 @@ const pluralize = (x) => {
 };
 
 const isNilorEmpty = (...values) => {
-  // To remove the argumetn which is appended by Handlebars for each helper function.
-  values = values.slice(0, values.length - 1);
+  const lastValue = values[values.length -1];
+  if (
+    lastValue["lookupProperty"] && 
+    lastValue["name"] && 
+    lastValue["hash"] && 
+    lastValue["data"] && 
+    lastValue["loc"]
+  ) {
+    // To remove the argument which is appended by Handlebars for each helper function.
+    values = values.slice(0, values.length - 1);
+  }
   let result = true;
   for (let i = 0; result && i < values.length; ++i) {
     const value = values[i];

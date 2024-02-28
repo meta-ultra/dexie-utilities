@@ -9,7 +9,6 @@ import { usePopup } from '@/utils/PopupContext';
 import $axios from '@/utils/$axios';
 import { {{#unless (isNilorEmpty $ui-foreigns)}}isArray, isNumber, {{/unless}}differenceWith, isEqual, groupBy } from "lodash-es";
 import useTableColumns from './useTableColumns';
-import styles from "./styles.module.css";
 
 export default function Page() {
   {{#each $ui-foreigns}}
@@ -118,7 +117,7 @@ export default function Page() {
           {{/each}}
           <Col span={12}>
             <Form.Item>
-              <div className={'flex flex-row gap-2 ' + styles.upload}>
+              <div className='flex flex-row gap-2 [&_.ant-upload-list.ant-upload-list-text]:!hidden'>
                 <Upload
                   accept=".xlsx,.xls"
                   maxCount={1}

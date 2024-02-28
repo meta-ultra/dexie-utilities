@@ -1,13 +1,23 @@
-import { type ReactNode, useEffect } from 'react';
+import { forwardRef, useEffect, useImperativeHandle } from 'react';
 import { type FormInstance, Form, Row, Col, {{getControlsNamedImports $ui}} } from "antd";
 {{#unless (isNilorEmpty $ui-foreigns)}}
 import { isArray, isNumber } from "lodash-es";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import $axios from "@/utils/$axios";
 {{/unless}}
+
+export type QueryFormProps = {
+  initialQueries?: Record<string, any>
+}
  
-export default function useQueryForm(queries?: Record<string, any>): [ReactNode, FormInstance<any>] {
+export default forwardRef<FormInstance, QueryFormProps>(({initialQueries}, ref) => {
   const [form] = Form.useForm();
+  useImperativeHandle(ref, () => form, [form]);
+  useEffect(() => {
+    if (initialQueries) {
+      form.setFieldsValue(initialQueries);
+    }
+  }, []);
   {{#each $ui-foreigns}}
   const {data: {{pluralize (getForeignPropertyName this.[0])~}} } = useSuspenseQuery({
     queryKey: [`/api/{{pluralizeKebabCase this.[1].foreignTableName}}`, {{{this.[1].foreignCondition}}}],
@@ -23,7 +33,7 @@ export default function useQueryForm(queries?: Record<string, any>): [ReactNode,
   });
   {{/each}}
 
-  const component = (
+  return (
     <Form form={form}>
       <Row gutter={16}>
         {{#each $ui}}
@@ -38,9 +48,4 @@ export default function useQueryForm(queries?: Record<string, any>): [ReactNode,
       </Row>
     </Form>
   );
-  useEffect(() => {
-    form.setFieldsValue(queries);
-  }, []);
-
-  return [component, form];
-}
+});

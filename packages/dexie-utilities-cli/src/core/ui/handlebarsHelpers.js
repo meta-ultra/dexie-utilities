@@ -1,12 +1,13 @@
 const Handlebars = require("handlebars");
 const { tokenizeReference } = require("../utils.js");
-const { pluralize, getForeignPropertyName, isNil } = require("../commonHandlebarsHelpers.js");
+const { pluralize, getForeignPropertyName, isNil, isNilorEmpty } = require("../commonHandlebarsHelpers.js");
+const { isEmpty } = require("lodash");
 
 const getControlsNamedImports = ($ui) => {
   const set = new Set();
   for (const item of Object.values($ui)) {
-    if (item.controls) {
-      set.add(item.controls.split(".")[0]);
+    if (item.controls && /^antd$/i.test(item.controls.package)) {
+      set.add(item.controls.type.split(".")[0]);
     }
   }
   return Array.from(set).join(", ");
@@ -17,44 +18,62 @@ const getControlsNamedImports = ($ui) => {
  */
 const getFormControls = (columnName, $uiColumn) => {
   let controls = "";
-  if (/^Input(\.[^.]+)?$/i.test($uiColumn.controls)) {
-    if (/^Input\.TextArea$/i.test($uiColumn.controls)) {
-      controls = `<${$uiColumn.controls} allowClear maxLength={${$uiColumn.maxLength}} showCount/>`;
+  if (/^Input(\.[^.]+)?$/i.test($uiColumn.controls.type)) {
+    const {type, ...props} = $uiColumn.controls;
+    if (!("allowClear" in props)) {
+      props.allowClear = true;
+    }
+
+    if (/^Input\.TextArea$/i.test($uiColumn.controls.type)) {
+      if (!("showCount" in props)) {
+        props.showCount = true;
+      }
+    }
+
+    controls = `<${type} {...(${JSON.stringify(props)})}/>`;
+  }
+  else if (/^InputNumber$/i.test($uiColumn.controls.type)) {
+    const {type, ...props} = $uiColumn.controls;
+    if (isEmpty(props)) {
+      controls = `<InputNumber rootClassName="!w-full"/>`;
     }
     else {
-      controls = `<${$uiColumn.controls} allowClear maxLength={${$uiColumn.maxLength}}/>`;
+      controls = `<InputNumber rootClassName="!w-full" {...(${JSON.stringify(props)})}/>`;
     }
   }
-  else if (/^InputNumber$/i.test($uiColumn.controls)) {
-    controls = `<InputNumber rootClassName="!w-full" min={${$uiColumn.min}} max={${$uiColumn.max}} precision={${$uiColumn.precision}} />`;
-  }
-  else if (/^DatePicker$/i.test($uiColumn.controls)) {
+  else if (/^DatePicker$/i.test($uiColumn.controls.type)) {
     controls = `<DatePicker />`;
   }
-  else if (/^Select$/i.test($uiColumn.controls)) {
-    controls = `<Select allowClear showSearch filterOption={(input, option) => !!(option && option.children && option.children.indexOf(input as any) !== -1)}>{${pluralize(getForeignPropertyName(columnName))} && ${pluralize(getForeignPropertyName(columnName))}.map((${$uiColumn.dataSource}) => (<Select.Option key={${$uiColumn.value}} value={${$uiColumn.value}}>{${$uiColumn.label}}</Select.Option>))}</Select>`;
+  else if (/^Select$/i.test($uiColumn.controls.type)) {
+    controls = `<Select allowClear showSearch filterOption={(input, option) => !!(option && option.children && option.children.indexOf(input as any) !== -1)}>{${pluralize(getForeignPropertyName(columnName))} && ${pluralize(getForeignPropertyName(columnName))}.map((${$uiColumn.controls.dataSource}) => (<Select.Option key={${$uiColumn.controls.value}} value={${$uiColumn.controls.value}}>{${$uiColumn.controls.label}}</Select.Option>))}</Select>`;
+  }
+  else {
+    const {type, ...props} = $uiColumn.controls;
+    if (isEmpty(props)) {
+      controls = `<${type}/>`;
+    }
+    else {
+      controls = `<${type} {...(${JSON.stringify(props)})}/>`;
+    }
   }
 
   return new Handlebars.SafeString(controls);
 };
 
 const isAvailableQueryFormControls = (controls) => {
-  if (isNil(controls) || /^\s*$/.test(controls)) {
+  if (isNil(controls) || isNilorEmpty(controls.type) || /^\s*$/.test(controls.type)) {
     return false;
   }
-  else if (/^Input\.(TextArea|Password)$/i.test(controls)){
-    return false;
-  }
-  else if (/^InputNumber$/i.test(controls)){
-    return false;
+  else if (/^(Input|Select|DatePicker)$/i.test(controls.type)) {
+    return true;
   }
   else {
-    return true;
+    return false;
   }
 };
 
 const getColSpan = (controls) => {
-  if (/^Input\.TextArea$/i.test(controls)) {
+  if (/^Input\.TextArea$/i.test(controls.type)) {
     return 24;
   }
   else {

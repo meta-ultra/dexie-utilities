@@ -8,5 +8,5 @@ export async function populateI{{~upperCamelCase tableName~}}(db: ApplicationDex
 
   const data: any[] = mock({{{initial}}});
 
-  await $table.bulkAdd(data);
+  await $table.bulkPut(data);
 }

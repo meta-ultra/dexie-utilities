@@ -26,37 +26,49 @@ function setControls($uiColumn, ui, yup, columnName, column) {
 
   if (column["foreign-key-references"]) {
     const [foreignTableName, condition, foreignFieldName] = tokenizeReference(column["foreign-key-references"]);
-    $uiColumn.controls = get(ui, `${columnName}.controls`) || "Select";
-    $uiColumn.dataSource = get(ui, `${columnName}.dataSource`) || foreignTableName;
-    $uiColumn.value = (get(ui, `${columnName}.value`) || [foreignTableName, foreignFieldName].join(".")).split(".").map((part) => camelCase(part)).join(".");
-    $uiColumn.label = get(ui, `${columnName}.label`) || [foreignTableName, foreignFieldName].join(".").split(".").map((part) => camelCase(part)).join(".");
+    $uiColumn.controls = {
+      package: get(ui, `${columnName}.controls.package`) || "antd",
+      type: get(ui, `${columnName}.controls.type`) || "Select",
+      dataSource: get(ui, `${columnName}.dataSource`) || foreignTableName,
+      value: (get(ui, `${columnName}.controls.value`) || [foreignTableName, foreignFieldName].join(".")).split(".").map((part) => camelCase(part)).join("."),
+      label: get(ui, `${columnName}.controls.label`) || [foreignTableName, foreignFieldName].join(".").split(".").map((part) => camelCase(part)).join("."),
+    };
   }
   else if ($uiColumn.type === "Date") {
-    $uiColumn.controls = get(ui, `${columnName}.controls`) || "DatePicker";
-    $uiColumn.format = get(ui, `${columnName}.format`) || "YYYY/MM/DD HH:mm:ss";
+    $uiColumn.controls = {
+      package: get(ui, `${columnName}.controls.package`) || "antd",
+      type: get(ui, `${columnName}.controls.type`) || "DatePicker",
+      format: get(ui, `${columnName}.controls.format`) || "YYYY/MM/DD HH:mm:ss",
+    };
   }
   else if ($uiColumn.type === "number") {
-    $uiColumn.controls = get(ui, `${columnName}.controls`) || "InputNumber";
-    $uiColumn.min = get(ui, `${columnName}.min`);
-    if (!isNumber($uiColumn.min)) {
-      $uiColumn.min = "undefined";
+    const {package, type, ...props} = get(ui, `${columnName}.controls`) || {};
+    $uiColumn.controls = {
+      package: package || "antd",
+      type: type || "InputNumber",
+      ...props
+    };
+    if (!isNumber($uiColumn.controls.min)) {
+      delete $uiColumn.controls.min;
     }
-    $uiColumn.max = get(ui, `${columnName}.max`);
-    if (!isNumber($uiColumn.max)) {
-      $uiColumn.max = "undefined";
+    if (!isNumber($uiColumn.controls.max)) {
+      delete $uiColumn.controls.max;
     }
-    $uiColumn.precision = get(ui, `${columnName}.precision`);
-    if (!isNumber($uiColumn.precision)) {
-      $uiColumn.precision = "undefined";
+    if (!isNumber($uiColumn.controls.precision)) {
+      delete $uiColumn.controls.precision;
     }
   }
   else {
-    $uiColumn.controls = get(ui, `${columnName}.controls`) || "Input";
-    $uiColumn.yup = yup[columnName];
-    $uiColumn.maxLength = get(ui, `${columnName}.maxLength`) || column.length;
-    if (!isNumber($uiColumn.maxLength)) {
-      $uiColumn.maxLength = "undefined";
+    const {package, type, ...props} = get(ui, `${columnName}.controls`) || {};
+    $uiColumn.controls = {
+      package: package || "antd",
+      type: type || "Input",
+      ...props
+    };
+    if (!isNumber($uiColumn.controls.maxLength)) {
+      delete $uiColumn.controls.maxLength;
     }
+    $uiColumn.yup = yup[columnName];
   }
 }
 function getUIRequired(ui, columnName, column) {
@@ -114,7 +126,7 @@ function frame$UIMany(metadata, tableName) {
 
 function sort$UI(metadata, tableName) {
   const sortedEntries = Object.entries(metadata[tableName]["$ui"]).sort((a, b) => {
-    return b[1].controls === "Input.TextArea"  ? -1 : 0 
+    return b[1].controls && b[1].controls.type === "Input.TextArea" ? -1 : 0 
   });
   metadata[tableName]["$ui"] = Object.fromEntries(sortedEntries);
 }

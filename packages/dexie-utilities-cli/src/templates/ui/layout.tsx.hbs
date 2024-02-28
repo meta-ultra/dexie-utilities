@@ -1,5 +1,5 @@
-import { type ReactNode, type Key, useState, useEffect, useMemo } from "react";
-import { Row, Col, Table, Button, Alert } from "antd";
+import { type ReactNode, type Key, useState, useEffect, useRef } from "react";
+import { type FormInstance, Table, Button, Alert } from "antd";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import useEvent from "react-use-event-hook";
 import { useNavigate, useLocation } from "react-router-dom";
@@ -10,7 +10,7 @@ import { useCache } from "@meta-ultra/cache";
 import { RouteModal } from '@/components/@meta-ultra/antd-plus';
 import $axios from "@/utils/$axios";
 import useTableColumns from "./useTableColumns";
-import useQueryForm from "./useQueryForm";
+import QueryForm from "./QueryForm";
 
 const RouteModalRoutes = [
   /\/(delete|add|import|export)$/,
@@ -51,12 +51,12 @@ export default function Layout({children}: {children: ReactNode}) {
     });
   });
 
-  const [queryForm, queryFormRef] = useQueryForm(queries);
+  const queryFormRef = useRef<FormInstance>(null);
   const onSearch = useEvent(() => {
     setQueries((queries) => {
       return {
         ...queries,
-        ...queryFormRef.getFieldsValue(),
+        ...queryFormRef.current?.getFieldsValue(),
         page: 1,
       }
     })
@@ -92,17 +92,20 @@ export default function Layout({children}: {children: ReactNode}) {
   return (
     <section className="m-1">
       <section className="bg-card rounded mb-2 p-5 shadow-[1px_1px_5px_0px_#cdcdcd]">
-        {queryForm}
-        <Row justify={"end"} gutter={16}>
-          <Col><Button onClick={onSearch} type="primary"><IoSearch size={20} className="inline-block relative -top-[2px] mr-2"/>查 询</Button></Col>
-          <Col><Button onClick={() => navigate(`add`)}><IoMdAddCircleOutline size={20} className="inline-block relative -top-[2px] mr-2"/>新 增</Button></Col>
-          <Col><Button onClick={() => navigate(`delete`, { state: {ids: selectedRowKeys} })} disabled={!hasSelected} danger><IoMdRemoveCircleOutline size={20} className="inline-block relative -top-[2px] mr-2"/>删 除</Button></Col>
-          <Col><Button onClick={() => {
-            const {page, pageSize, ...rest} = queries;
-            navigate(`export`, { state: {queries: rest} });
-          }}><TbDatabaseExport size={20} className="inline-block relative -top-[2px] mr-2"/>导 出</Button></Col>
-          <Col><Button onClick={() => navigate(`import`)}><TbDatabaseImport size={20} className="inline-block relative -top-[2px] mr-2"/>导 入</Button></Col>
-        </Row>
+        <QueryForm initialQueries={queries} ref={queryFormRef}/>
+        <section className="flex flex-row flex-wrap gap-2 md:gap-3 [&_.ant-btn]:px-1 sm:[&_.ant-btn]:px-2 md:[&_.ant-btn]:px-4">
+          <Button onClick={onSearch} type="primary"><IoSearch size={20} className="inline-block relative -top-[2px] sm:mr-1 md:mr-2"/>查 询</Button>
+          <Button onClick={() => navigate(`add`)}><IoMdAddCircleOutline size={20} className="inline-block relative -top-[2px] sm:mr-1 md:mr-2"/>新 增</Button>
+          <Button onClick={() => navigate(`delete`, { state: {ids: selectedRowKeys} })} disabled={!hasSelected} danger><IoMdRemoveCircleOutline size={20} className="inline-block relative -top-[2px] sm:mr-1 md:mr-2"/>删 除</Button>
+          <Button onClick={() => {
+              const {page, pageSize, ...rest} = queries;
+              navigate(`export`, { state: {queries: rest} });
+            }}
+          >
+            <TbDatabaseExport size={20} className="inline-block relative -top-[2px] sm:mr-1 md:mr-2"/>导 出
+          </Button>
+          <Button onClick={() => navigate(`import`)}><TbDatabaseImport size={20} className="inline-block relative -top-[2px] sm:mr-1 md:mr-2"/>导 入</Button>
+        </section>
       </section>
       <section className="bg-card rounded mt-1 mb-2 p-5 shadow-[1px_1px_5px_0px_#cdcdcd]">
         { 
