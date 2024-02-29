@@ -1,7 +1,9 @@
 import { forwardRef, useEffect, useImperativeHandle } from 'react';
-import { type FormInstance, Form, Row, Col, {{getAntdControlsNamedImports $ui}} } from "antd";
+import { type FormInstance, Form, {{getAntdControlsNamedImports $ui}} } from "antd";
 {{#each (getAdditionalPackageControlsNamedImports $ui)}}
+{{#if (isAvailableQueryFormControls @key)}}
 import { {{this}} } from "{{@key}}";
+{{/if}}
 {{/each}}
 {{#unless (isNilorEmpty $ui-foreigns)}}
 import { isArray, isNumber } from "lodash-es";
@@ -37,18 +39,14 @@ export default forwardRef<FormInstance, QueryFormProps>(({initialQueries}, ref) 
   {{/each}}
 
   return (
-    <Form form={form} autocomplete="off">
-      <Row gutter={16}>
-        {{#each $ui}}
-        {{#if (isAvailableQueryFormControls this.controls)}}
-        <Col span={ {{~getColSpan this.controls~}} }>
-          <Form.Item label={"{{this.title}}"} name={"{{@key}}"}>
-            {{getFormControls @key this}}
-          </Form.Item>
-        </Col>
-        {{/if}}
-        {{/each}}
-      </Row>
+    <Form form={form} autoComplete="off">
+      <section className='flex flex-row flex-wrap gap-form'>
+        {{#each $ui}}{{#if (isAvailableQueryFormControls this.controls)}}
+        <Form.Item rootClassName={"{{getFormItemClassName 'basis-form-1/2 md:basis-form-1/4' this.controls}}"} label={"{{this.title}}"} name={"{{@key}}"}>
+          {{getFormControls @key this}}
+        </Form.Item>
+        {{/if}}{{/each}}
+      </section>
     </Form>
   );
 });

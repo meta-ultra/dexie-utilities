@@ -124,9 +124,28 @@ function frame$UIMany(metadata, tableName) {
   }
 }
 
+
+function rateControls(controls) {
+  if (!controls) {
+    return 0;
+  }
+  else if (/^picture|upload|file/i.test(controls.type)) {
+    return 1;
+  }
+  else if (/^input\.textarea$/i.test(controls.type)) {
+    return 2;
+  }
+  else {
+    return 0;
+  }
+}
+
 function sort$UI(metadata, tableName) {
   const sortedEntries = Object.entries(metadata[tableName]["$ui"]).sort((a, b) => {
-    return b[1].controls && b[1].controls.type === "Input.TextArea" ? -1 : 0 
+    const aScore = rateControls(a[1].controls);
+    const bScore = rateControls(b[1].controls);
+
+    return aScore > bScore ? 1 : aScore === bScore ? 0 : -1;
   });
   metadata[tableName]["$ui"] = Object.fromEntries(sortedEntries);
 }

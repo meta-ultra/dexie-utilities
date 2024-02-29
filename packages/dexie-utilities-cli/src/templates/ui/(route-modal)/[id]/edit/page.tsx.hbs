@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { Button, Form, Row, Col, {{getAntdControlsNamedImports $ui}} } from "antd";
+import { Button, Form, {{getAntdControlsNamedImports $ui}} } from "antd";
 {{#each (getAdditionalPackageControlsNamedImports $ui)}}
 import { {{this}} } from "{{@key}}";
 {{/each}}
@@ -83,18 +83,16 @@ export default function Page({params}: {params: {id: string}}) {
 
   return (
     <div>
-      <Form form={formRef} autocomplete="off">
-        <Row gutter={16}>
+      <Form form={formRef} autoComplete="off">
+        <section className='flex flex-row flex-wrap gap-form'>
           {{#each $ui}}
           {{#unless (isNilorEmpty this.title)}}
-          <Col span={ {{~getColSpan this.controls~}} }>
-            <Form.Item label={"{{this.title}}"} name={"{{@key}}"} rules={[{required: {{this.required~}} }]}>
-              {{getFormControls @key this}}
-            </Form.Item>
-          </Col>
+          <Form.Item rootClassName={"{{getFormItemClassName 'basis-form-1/2 md:basis-form-1/4' this.controls}}"} label={"{{this.title}}"} name={"{{@key}}"} rules={[{required: {{this.required~}} }]}>
+            {{getFormControls @key this}}
+          </Form.Item>
           {{/unless}}
           {{/each}}
-        </Row>
+        </section>
       </Form>
     </div>
   )

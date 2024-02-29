@@ -1,7 +1,7 @@
 const Handlebars = require("handlebars");
 const { tokenizeReference } = require("../utils.js");
-const { pluralize, getForeignPropertyName, isNil, isNilorEmpty } = require("../commonHandlebarsHelpers.js");
-const { isEmpty } = require("lodash");
+const { pluralize, getForeignPropertyName, isNilorEmpty } = require("../commonHandlebarsHelpers.js");
+const { isEmpty, isString } = require("lodash");
 
 const getAntdControlsNamedImports = ($ui) => {
   const set = new Set();
@@ -81,10 +81,12 @@ const getFormControls = (columnName, $uiColumn) => {
 };
 
 const isAvailableQueryFormControls = (controls) => {
-  if (isNil(controls) || isNilorEmpty(controls.type) || /^\s*$/.test(controls.type)) {
+  const type = isString(controls) ? controls : controls && controls.type;
+
+  if (isNilorEmpty(type) || /^\s*$/.test(type)) {
     return false;
   }
-  else if (/^(Input|Select|DatePicker)$/i.test(controls.type)) {
+  else if (/^(Input|Select|DatePicker)$/i.test(type)) {
     return true;
   }
   else {
@@ -92,12 +94,12 @@ const isAvailableQueryFormControls = (controls) => {
   }
 };
 
-const getColSpan = (controls) => {
-  if (/^Input\.TextArea$/i.test(controls.type)) {
-    return 24;
+const getFormItemClassName = (defaultClassName, controls) => {
+  if (/^(Input\.TextArea|Picture.*)$/i.test(controls.type)) {
+    return "basis-full";
   }
   else {
-    return 6;
+    return defaultClassName;
   }
 };
 
@@ -114,5 +116,5 @@ module.exports = {
   getFormControls,
   getForeignFieldName,
   isAvailableQueryFormControls,
-  getColSpan,
+  getFormItemClassName,
 };
