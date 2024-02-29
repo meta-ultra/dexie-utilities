@@ -7,8 +7,8 @@ const handlebarsHelpers = require("./handlebarsHelpers.js");
 // register route-handlers-specific Handlebars helpers
 registerHandlers(handlebarsHelpers);
 
-function generateRouteHandlersCode(metadata, databasePackage) {
-  const templateDirRelativePath = "../../templates/route-handlers";
+function generateApiCode(metadata, databasePackage) {
+  const templateDirRelativePath = "../../templates/api";
   const absolutePaths = globSync(splashify(join(__dirname, templateDirRelativePath + "/**/*.*")));
   const paths = absolutePaths.map((absolutePath) => [absolutePath, splashify(relative(__dirname, absolutePath))]);
 
@@ -16,7 +16,7 @@ function generateRouteHandlersCode(metadata, databasePackage) {
   for (const [tableName, tableMetadata] of Object.entries(metadata)) {
     for (const [absolutePath, relativePath] of paths) {
       if (/\.hbs$/i.test(relativePath)) {
-        files[`${pluralizeKebabCase(tableName)}${relativePath.replace(templateDirRelativePath, "").replace(/\.hbs$/i, "")}`] = generateCodeOnFly(
+        files[`${relativePath.replace(templateDirRelativePath, "").replace("{{name}}", pluralizeKebabCase(tableName)).replace(/\.hbs$/i, "")}`] = generateCodeOnFly(
           absolutePath, 
           {
             tableName,
@@ -28,7 +28,7 @@ function generateRouteHandlersCode(metadata, databasePackage) {
         );
       }
       else {
-        files[`${pluralizeKebabCase(tableName)}${relativePath.replace(templateDirRelativePath, "")}`] = readFileContentSync(absolutePath);
+        files[`${relativePath.replace("{{name}}", pluralizeKebabCase(tableName)).replace(templateDirRelativePath, "")}`] = readFileContentSync(absolutePath);
       }
     }
   }
@@ -36,4 +36,4 @@ function generateRouteHandlersCode(metadata, databasePackage) {
   return files;
 }
 
-module.exports = generateRouteHandlersCode;
+module.exports = generateApiCode;

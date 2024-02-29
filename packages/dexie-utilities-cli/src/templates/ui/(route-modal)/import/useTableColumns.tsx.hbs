@@ -14,7 +14,7 @@ export default function useTableColumns(onDelete: (id: number) => void) {
       { title: "{{this.title}}", dataIndex: "{{@key}}", key: "{{@key}}", sorter: {{this.table-column.sorter}}, align: "{{this.table-column.align}}" as "{{this.table-column.align}}", width: {{this.table-column.width}}, 
         render(value: any, record: any) {
         {{#if this.isRef}}
-          return record["{{getForeignPropertyName @key}}"]["{{getForeignFieldName this.label}}"];
+          return record["{{getForeignPropertyName @key}}"]["{{getForeignFieldName this.controls.label}}"];
         {{else}}
           return value;
         {{/if}}

@@ -5,33 +5,38 @@ const Handlebars = require("handlebars");
  * Frame the yup schema. 
  */
 const frameRouteHandlersYupSchema = (field, strict) => {
-  const schema = [`${field.yupType === "integer" ? "number" : field.yupType}()`];
-  if (["number", "integer"].indexOf(field.yupType) !== -1) {
-    if (field.yupType === "integer") {
-      schema.push("integer()");
-    }
-
-    if ("min" in field) {
-      schema.push(`min(${field.min})`);
-    }
-    if ("max" in field) {
-      schema.push(`max(${field.max})`);
-    }
+  let schema = [];
+  if (/^files?$/i.test(field.yup.type)) {
+    schema.push("files()");
   }
+  else {
+    schema = [`${field.yup.type === "integer" ? "number" : field.yup.type}()`];
+    if (["number", "integer"].indexOf(field.yup.type) !== -1) {
+      if (field.yup.type === "integer") {
+        schema.push("integer()");
+      }
 
-  if (field.yupType === "string") {
-    if (isNumber(field.length)) {
-      schema.push(`max(${field.length})`);
+      if ("min" in field) {
+        schema.push(`min(${field.min})`);
+      }
+      if ("max" in field) {
+        schema.push(`max(${field.max})`);
+      }
+    }
+    else if (field.yup.type === "string") {
+      if (isNumber(field.length)) {
+        schema.push(`max(${field.length})`);
+      }
+
+      const regexp = get(field, "yup.regexp");
+      if (regexp) {
+        schema.push(`matches(RegExp("${regexp}"))`);
+      }
     }
 
-    const regexp = get(field, "yup.regexp");
-    if (regexp) {
-      schema.push(`matches(RegExp("${regexp}"))`);
+    if (strict === true && field.required) {
+      schema.push("required()");
     }
-  }
-
-  if (strict === true && field.required) {
-    schema.push("required()");
   }
 
   return schema.length ? new Handlebars.SafeString(schema.join(".")) : "";

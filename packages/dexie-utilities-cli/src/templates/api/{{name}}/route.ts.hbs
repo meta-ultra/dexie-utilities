@@ -1,8 +1,8 @@
 import { type NextRequest, type NextContext, NextResponse, objectify, withValidation } from "@meta-ultra/app-router";
 import { isEqual, isArray, isString } from "lodash-es";
-import * as yup from "yup";
+import yup from "../yup";
 /* Dexie START */
-import { query } from "@meta-ultra/dexie-utilities";
+import { query, pickPrimitive, dataUrify } from "@meta-ultra/dexie-utilities";
 import { db, I{{~upperCamelCase tableName~}}TableName, I{{upperCamelCase tableName}}{{#unless (isNilorEmpty $route-handlers-foreigns $route-handlers-many)}}, {{upperCamelCase tableName}}{{/unless}} } from "{{databasePackage}}";
 /* Dexie END */
 
@@ -124,6 +124,13 @@ export const DELETE = withValidation(
   }
 );
 
+const base64Schema = yup.string().matches(/^data\s*:\s*[^:;]+;\s*base64\s*,/i)
+const fileSchema = yup.mixed().test((value) => value instanceof File || base64Schema.isValidSync(value)); 
+const fileListSchema = yup.array().of(fileSchema);
+const filesSchema = yup.mixed().test((value) => {
+  return fileSchema.isValidSync(value) || fileListSchema.isValidSync(value);
+});
+
 const singleBodySchemaOfPost = yup.object({
   {{#each $route-handlers}}
   {{@key~}}: yup.{{frameRouteHandlersYupSchema this true}},
@@ -136,17 +143,27 @@ const bodySchemaOfPost = yup.mixed().test((value) => {
 export const POST = withValidation(
   { bodySchema: bodySchemaOfPost },
   async function (request: NextRequest, context: NextContext) {
-    const json = await request.json();
-    const isBatch = batchBodySchemaOfPost.isValidSync(json);
+    let data: object | FormData;
+    const contentType = request.headers.get("Content-Type") || "";
+    if (/^application\/json$/i.test(contentType)) {
+      data = await request.json();
+    }
+    else {
+      data = await request.formData();
+    }
+
+    const isBatch = batchBodySchemaOfPost.isValidSync(data);
     try {
       if (isBatch) {
-        const records = batchBodySchemaOfPost.cast(json);
+        // The data must be the type of JSON for batch operating.
+        const records = batchBodySchemaOfPost.cast(data);
         if (records) {
           /* Dexie START */
           await Promise.all(
             records.map(async (record) => {
-              if (!await $table.where(record).count()) {
-                await $table.add({...record});
+              record = await dataUrify(objectify(record));
+              if (!await $table.where(pickPrimitive(record)).count()) {
+                await $table.add({...record as any});
               }
             })
           )
@@ -154,9 +171,10 @@ export const POST = withValidation(
         } 
       }
       else {
-        const record = singleBodySchemaOfPost.cast(json);
+        let record = data instanceof FormData ? data : singleBodySchemaOfPost.cast(data);
         /* Dexie START */
-        await $table.add({...record});
+        record = await dataUrify(objectify(record));
+        await $table.add(singleBodySchemaOfPost.cast(record) as any);
         /* Dexie END */
       }
       return NextResponse.json({code: 0});

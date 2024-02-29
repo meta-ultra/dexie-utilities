@@ -33,7 +33,23 @@ export default function Page() {
   const [formRef] = Form.useForm();
   const mutation = useMutation({
     mutationFn() {
-      return $axios.post(`/api/{{pluralizeKebabCase tableName}}`, formRef.getFieldsValue());
+      let data = formRef.getFieldsValue()
+      const entries = Object.entries(data);
+      const hasFile = !!entries.find(([name, value]) => isArray(value));
+      if (hasFile) {
+        data = new FormData();
+        for (const [name, value] of entries) {
+          if (isArray(value)) {
+            for (const item of value) {
+              data.append(name, (item as unknown as {originFileObj: File}).originFileObj);
+            }
+          }
+          else if (value != undefined) {
+            data.append(name, value);
+          }
+        }
+      }
+      return $axios.post(`/api/{{pluralizeKebabCase tableName}}`, data);
     }
   });
 
@@ -76,7 +92,7 @@ export default function Page() {
         <section className='flex flex-row flex-wrap gap-form'>
           {{#each $ui}}
           {{#unless (isNilorEmpty this.title)}}
-            <Form.Item rootClassName={"{{getFormItemClassName 'basis-form-1/2 md:basis-form-1/4' this.controls}}"} label={"{{this.title}}"} name={"{{@key}}"} rules={[{required: {{this.required~}} }]}>
+            <Form.Item rootClassName={"{{getFormItemClassName 'basis-form-1/2 lg:basis-form-1/4' this.controls}}"} label={"{{this.title}}"} name={"{{@key}}"} rules={[{required: {{this.required~}} }]}>
               {{getFormControls @key this}}
             </Form.Item>
           {{/unless}}

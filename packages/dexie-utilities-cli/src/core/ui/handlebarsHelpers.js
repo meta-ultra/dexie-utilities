@@ -94,6 +94,19 @@ const isAvailableQueryFormControls = (controls) => {
   }
 };
 
+const isAvailableTableColumnControls = (controls) => {
+  const type = isString(controls) ? controls : controls && controls.type;
+  if (isNilorEmpty(type) || /^\s*$/.test(type)) {
+    return false;
+  }
+  else if (/^(Input|Input\.TextArea|Picture.*|Select|DatePicker)$/i.test(type)) {
+    return true;
+  }
+  else {
+    return false;
+  }
+}
+
 const getFormItemClassName = (defaultClassName, controls) => {
   if (/^(Input\.TextArea|Picture.*)$/i.test(controls.type)) {
     return "basis-full";
@@ -110,11 +123,18 @@ const getForeignFieldName = (ref) => {
   return tokenizeReference(ref)[2];
 };
 
+const isImage = (controls) => {
+  const type = controls && controls.type || "";
+  return /^picture/i.test(type);
+};
+
 module.exports = {
   getAntdControlsNamedImports,
   getAdditionalPackageControlsNamedImports,
   getFormControls,
   getForeignFieldName,
   isAvailableQueryFormControls,
+  isAvailableTableColumnControls,
   getFormItemClassName,
+  isImage,
 };

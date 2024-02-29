@@ -19,15 +19,19 @@ function frame$RouteHandlersMany(metadata, tableName) {
 function frame$RouteHandlers(metadata, tableName, columnName, dexie, yup) {
   const column = metadata[tableName].columns[columnName];
   const $routeHandlers = metadata[tableName]["$route-handlers"] = metadata[tableName]["$route-handlers"] || {};
+
   $routeHandlers[cvtColumnName2TSPropName(columnName)] = {
     title: column.title,
-    yupType: cvtColumnType2YupSchemaType(column.type),
+    // yupType: cvtColumnType2YupSchemaType(column.type),
     type: cvtColumnType2TSType(column.type),
     required: !!column["not-null"],
     indexed: !get(dexie, `${columnName}.not-indexed`),
     isPrimary: !!column["primary-key"],
     length: column.length,
-    yup: yup[columnName],
+    yup: {
+      type: cvtColumnType2YupSchemaType(column.type),
+      ...yup[columnName],
+    },
   };
 }
 

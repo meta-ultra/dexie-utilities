@@ -1,5 +1,5 @@
 import { type NextRequest, type NextContext, NextResponse, objectify, withValidation } from "@meta-ultra/app-router";
-import * as yup from "yup";
+import yup from "../../yup";
 import { db, I{{~upperCamelCase tableName~}}TableName{{#unless (isNilorEmpty $route-handlers-foreigns)}}, {{upperCamelCase tableName}}{{/unless}} } from "{{databasePackage}}";
 
 const $table = db[I{{~upperCamelCase tableName~}}TableName];

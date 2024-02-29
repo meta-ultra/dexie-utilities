@@ -42,7 +42,7 @@ export default forwardRef<FormInstance, QueryFormProps>(({initialQueries}, ref) 
     <Form form={form} autoComplete="off">
       <section className='flex flex-row flex-wrap gap-form'>
         {{#each $ui}}{{#if (isAvailableQueryFormControls this.controls)}}
-        <Form.Item rootClassName={"{{getFormItemClassName 'basis-form-1/2 md:basis-form-1/4' this.controls}}"} label={"{{this.title}}"} name={"{{@key}}"}>
+        <Form.Item rootClassName={"{{getFormItemClassName 'basis-form-1/2 lg:basis-form-1/4' this.controls}}"} label={"{{this.title}}"} name={"{{@key}}"}>
           {{getFormControls @key this}}
         </Form.Item>
         {{/if}}{{/each}}

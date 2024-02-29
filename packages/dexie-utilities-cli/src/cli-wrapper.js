@@ -90,10 +90,10 @@ if (!parsed.options.h && !parsed.options.v) {
 
     normalize(metadata);
     // console.log(JSON.stringify(metadata["user"]["$ui"], null, 2));
-    const { dexie, routeHandlers, ui } = generateCode(metadata, databasePackage);
+    const { dexie, api, ui } = generateCode(metadata, databasePackage);
     await Promise.all([
       outputCode(dbOutputPath, dexie),
-      outputCode(routeHandlersOutputPath, routeHandlers),
+      outputCode(routeHandlersOutputPath, api),
       outputCode(uiOutputPath, ui),
     ]);
 

@@ -1,7 +1,7 @@
 const Nagging = require("./Nagging.js");
 const { tokenizeReference } = require("./utils.js");
 const { frame$Dexie, frame$DexieForeigns, frame$DexieMany } = require("./dexie/normalize.js");
-const { frame$RouteHandlers, frame$RouteHandlersForeigns, frame$RouteHandlersMany } = require("./route-handlers/normalize.js");
+const { frame$RouteHandlers, frame$RouteHandlersForeigns, frame$RouteHandlersMany } = require("./api/normalize.js");
 const { frame$UI, frame$UIForeigns, frame$UIMany, sort$UI } = require("./ui/normalize.js");
 
 const nagging = new Nagging();
