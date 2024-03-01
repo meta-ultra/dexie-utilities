@@ -7,7 +7,7 @@ import { IoSearch } from "react-icons/io5";
 import { IoMdAddCircleOutline, IoMdRemoveCircleOutline } from "react-icons/io";
 import { TbDatabaseExport, TbDatabaseImport } from "react-icons/tb";
 import { useCache } from "@meta-ultra/cache";
-import { RouteModal } from '@/components/@meta-ultra/antd-plus';
+import { RouteModal, cvtDayjs2Date } from '@/components/@meta-ultra/antd-plus';
 import $axios from "@/utils/$axios";
 import useTableColumns from "./useTableColumns";
 import QueryForm from "./QueryForm";
@@ -29,7 +29,18 @@ export default function Layout({children}: {children: ReactNode}) {
   const [queries, setQueries] = useState<Queries>({page: 1, pageSize: 10, ...(cache.get("{{pluralizeKebabCase tableName}}") || {})});
   const { isLoading, data: dataSource = {data: [], total: 0} } = useQuery<{data: any[], total: number}>({
     queryKey: ["/api/{{pluralizeKebabCase tableName}}", queries],
-    queryFn: ({queryKey}) => $axios.get(queryKey[0] as string, {params: queryKey[1]})
+    queryFn: ({queryKey}) => {
+      const queries: any = queryKey[1] || {};
+      const params: any = Object.assign({}, queries);
+      // for datetime
+      {{#each $ui}}
+      {{#if (isDate this.type)}}
+      params["{{@key}}"] = cvtDayjs2Date(queries["{{@key}}"]);
+      {{/if}}
+      {{/each}}
+
+      return $axios.get(queryKey[0] as string, {params})
+    }
   });
   const onTableChange = useEvent((pagination, filters, sorter, extra) => {
     setQueries((queries) => {

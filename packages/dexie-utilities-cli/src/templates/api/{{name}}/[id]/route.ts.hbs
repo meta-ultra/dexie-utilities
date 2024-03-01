@@ -1,4 +1,5 @@
 import { type NextRequest, type NextContext, NextResponse, objectify, withValidation } from "@meta-ultra/app-router";
+import { dataUrify } from "@meta-ultra/dexie-utilities";
 import yup from "../../yup";
 import { db, I{{~upperCamelCase tableName~}}TableName{{#unless (isNilorEmpty $route-handlers-foreigns)}}, {{upperCamelCase tableName}}{{/unless}} } from "{{databasePackage}}";
 
@@ -61,10 +62,21 @@ export const PUT = withValidation(
   async function (request: NextRequest, context: NextContext) {
     try {
       const params = paramsSchemaOfPut.cast(context.params);
-      const data = bodySchemaOfPut.cast(await request.json());
+
+      let data: object | FormData;
+      const contentType = request.headers.get("Content-Type") || "";
+      if (/^application\/json$/i.test(contentType)) {
+        data = bodySchemaOfPut.cast(await request.json());
+      }
+      else {
+        data = await request.formData();
+      }
+
       /* Dexie START */
+      {{!-- data = await dataUrify(objectify(data)); --}}
+      const dexieRecord = objectify(data);
       {{#each (getRouteHandlersPrimaryKeys $route-handlers)}}
-      await $table.update(params.{{@key}}, data);
+      await $table.update(params.{{@key}}, dexieRecord);
       {{/each}}
       /* Dexie END */
       return NextResponse.json({ code: 0 });

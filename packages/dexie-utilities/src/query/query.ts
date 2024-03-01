@@ -1,41 +1,48 @@
 import dayjs from "dayjs";
 import { type Table } from "dexie";
 import { get, isString, isNumber, isNil, isArray } from "lodash-es";
-import { getQueryParams, groupQueryKeys, getNestedValue } from "./utils";
+import { groupQueryKeys, getNestedValue } from "./utils";
 
 const defaultFilter = (queryKey: string | undefined, value: any, queryValue: any): boolean => {
   if (isString(value)) {
     return (value ?? "").indexOf(queryValue) !== -1;
   }
-  // TODO: additional predications added here
-  // else if () {
-  // }
-  else if (value instanceof Date) {
-    const match = /(\d{4})(?:[-/]?(\d{2}))?(?:[-/]?(\d{2}))?(?:(?:\s*T\s*|\s+)(\d{2})(?::(\d{2}))?(?::(\d{2}))?)?/.exec(queryValue);
-    let unit = match && ["year", "month", "day", "hour", "minute", "second"][match.filter((x) => x).length - 2] || "second";
-    if (queryKey !== undefined) {
-      if (/^(?:start|begin)(?=[A-Z_\W])/.test(queryKey)) {
-        return dayjs(queryValue).isBefore(dayjs(value), unit as any) || dayjs(queryValue).isSame(dayjs(value), unit as any);
-      }
-      if (/^(?:end|stop)(?=[A-Z_\W])/.test(queryKey)) {
-        return dayjs(queryValue).isAfter(dayjs(value), unit as any) || dayjs(queryValue).isSame(dayjs(value), unit as any);
-      }
-    }
+  // else if (value instanceof Date) {
+  //   const match = /(\d{4})(?:[-/]?(\d{2}))?(?:[-/]?(\d{2}))?(?:(?:\s*T\s*|\s+)(\d{2})(?::(\d{2}))?(?::(\d{2}))?)?/.exec(queryValue);
+  //   let unit = match && ["year", "month", "day", "hour", "minute", "second"][match.filter((x) => x).length - 2] || "second";
+  //   if (queryKey !== undefined) {
+  //     if (/^(?:start|begin)(?=[A-Z_\W])/.test(queryKey)) {
+  //       return dayjs(queryValue).isBefore(dayjs(value), unit as any) || dayjs(queryValue).isSame(dayjs(value), unit as any);
+  //     }
+  //     if (/^(?:end|stop)(?=[A-Z_\W])/.test(queryKey)) {
+  //       return dayjs(queryValue).isAfter(dayjs(value), unit as any) || dayjs(queryValue).isSame(dayjs(value), unit as any);
+  //     }
+  //   }
 
-    return dayjs(queryValue).isSame(dayjs(value), unit as any);
-  }
+  //   return dayjs(queryValue).isSame(dayjs(value), unit as any);
+  // }
   else if (isNil(value)) {
     return isNil(queryValue) || queryValue === "";
   }
   else if (isArray(queryValue)) {
-    return !!queryValue.find((x: any) => {
-      if (isString(value)) {
-        return (value ?? "").indexOf(x) !== -1;
-      }
-      else {
-        return value === x;
-      }
-    });
+    if (queryValue.length === 2 && dayjs(queryValue[0]).isValid() && dayjs(queryValue[1]).isValid()) {
+      const match = /(\d{4})(?:[-/]?(\d{2}))?(?:[-/]?(\d{2}))?(?:(?:\s*T\s*|\s+)(\d{2})(?::(\d{2}))?(?::(\d{2}))?)?/.exec(queryValue);
+      let unit = match && ["year", "month", "day", "hour", "minute", "second"][match.filter((x) => x).length - 2] || "second";
+      return (
+        (dayjs(queryValue[0]).isBefore(dayjs(value), unit as any) || dayjs(queryValue[0]).isSame(dayjs(value), unit as any)) && 
+        (dayjs(queryValue[1]).isAfter(dayjs(value), unit as any) || dayjs(queryValue[1]).isSame(dayjs(value), unit as any))
+      );
+    }
+    else {
+      return !!queryValue.find((x: any) => {
+        if (isString(value)) {
+          return (value ?? "").indexOf(x) !== -1;
+        }
+        else {
+          return value === x;
+        }
+      });
+    }
   }
   else {
     return value === queryValue;
@@ -50,7 +57,7 @@ const query = async <E = any>(
   sorter?: {field?: string, order?: "ascend" | "descend"},
   filter = defaultFilter
 ): Promise<{ total: number, data: E[] }> => {
-  const [queryDirectKeys, queryNestedKeys] = groupQueryKeys(getQueryParams(params));
+  const [queryDirectKeys, queryNestedKeys] = groupQueryKeys(params);
 
   let collection = undefined;
   if (queryDirectKeys && queryDirectKeys.length) {

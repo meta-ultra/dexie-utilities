@@ -1,4 +1,4 @@
-const { get, cloneDeep, isNumber, camelCase } = require("lodash");
+const { isString, get, cloneDeep, isNumber, camelCase } = require("lodash");
 const { cvtColumnName2TSPropName, cvtColumnType2TSType, cvtColumnType2YupSchemaType, tokenizeReference } = require("../utils.js");
 
 function getUITitle(metadata, ui, columnName, column) {
@@ -25,20 +25,24 @@ function setControls($uiColumn, ui, yup, columnName, column) {
   if (column["primary-key"]) return;
 
   if (column["foreign-key-references"]) {
+    const {package, type, dataSource, value, label, ...props} = get(ui, `${columnName}.controls`) || {};
     const [foreignTableName, condition, foreignFieldName] = tokenizeReference(column["foreign-key-references"]);
     $uiColumn.controls = {
-      package: get(ui, `${columnName}.controls.package`) || "antd",
-      type: get(ui, `${columnName}.controls.type`) || "Select",
-      dataSource: get(ui, `${columnName}.dataSource`) || foreignTableName,
-      value: (get(ui, `${columnName}.controls.value`) || [foreignTableName, foreignFieldName].join(".")).split(".").map((part) => camelCase(part)).join("."),
-      label: get(ui, `${columnName}.controls.label`) || [foreignTableName, foreignFieldName].join(".").split(".").map((part) => camelCase(part)).join("."),
+      package: package || "antd",
+      type: type || "Select",
+      dataSource: dataSource || foreignTableName,
+      value: (value || [foreignTableName, foreignFieldName].join(".")).split(".").map((part) => camelCase(part)).join("."),
+      label: (label || [foreignTableName, foreignFieldName].join(".")).split(".").map((part) => camelCase(part)).join("."),
+      ...props,
     };
   }
   else if ($uiColumn.type === "Date") {
+    const {package, type, format, ...props} = get(ui, `${columnName}.controls`) || {};
     $uiColumn.controls = {
-      package: get(ui, `${columnName}.controls.package`) || "antd",
-      type: get(ui, `${columnName}.controls.type`) || "DatePicker",
-      format: get(ui, `${columnName}.controls.format`) || "YYYY/MM/DD HH:mm:ss",
+      package: package || "antd",
+      type: type || "DatePicker",
+      format: format || "YYYY/MM/DD HH:mm:ss",
+      ...props,
     };
   }
   else if ($uiColumn.type === "number") {
@@ -82,15 +86,29 @@ function getUIRequired(ui, columnName, column) {
 }
 function setUITableColumn($uiColumn, ui, columnName) {
   const tableColumn = $uiColumn["table-column"] = {};
-  tableColumn["sorter"] = get(ui, `table-columns.${columnName}.sorter`);
-  if (tableColumn["sorter"] === undefined) {
-    tableColumn["sorter"] = true;
+  let { sorter = true, width, align = "center", ...props } = get(ui, `${columnName}.table-column`) || {};
+  if (width === undefined) {
+    width = ($uiColumn.title ? $uiColumn.title.length * 80 : "undefined");
   }
-  tableColumn["width"] = get(ui, `table-columns.${columnName}.width`);
-  if (tableColumn["width"] === undefined) {
-    tableColumn["width"] = ($uiColumn.title ? $uiColumn.title.length * 80 : "undefined");
+  tableColumn["sorter"] = sorter;
+  tableColumn["width"] = width;
+  tableColumn["align"] = align;
+  for (const [name, value] of Object.entries(props)) {
+    if (isString(value)) {
+      props[name] = `"${value}" as "${value}"`;
+    }
   }
-  tableColumn["align"] = get(ui, `table-columns.${columnName}.align`) || "center";
+  tableColumn["props"] = props;
+
+  // tableColumn["sorter"] = get(ui, `table-columns.${columnName}.sorter`);
+  // if (tableColumn["sorter"] === undefined) {
+  //   tableColumn["sorter"] = true;
+  // }
+  // tableColumn["width"] = get(ui, `table-columns.${columnName}.width`);
+  // if (tableColumn["width"] === undefined) {
+  //   tableColumn["width"] = ($uiColumn.title ? $uiColumn.title.length * 80 : "undefined");
+  // }
+  // tableColumn["align"] = get(ui, `table-columns.${columnName}.align`) || "center";
 }
 
 function frame$UI(metadata, tableName, columnName, ui, yup) {
@@ -99,10 +117,14 @@ function frame$UI(metadata, tableName, columnName, ui, yup) {
   const name = cvtColumnName2TSPropName(columnName);
   $ui[name] = {
     title: getUITitle(metadata, ui, columnName, column),
-    yupType: cvtColumnType2YupSchemaType(column.type),
     type: cvtColumnType2TSType(column.type),
     required: getUIRequired(ui, columnName, column),
     isRef: !!column["foreign-key-references"],
+    nonEditable: !!get(ui, `${columnName}.non-editable`),
+    yup: {
+      type: cvtColumnType2YupSchemaType(column.type),
+      ...yup[columnName],
+    },
   };
 
   setControls($ui[name], ui, yup, columnName, column);

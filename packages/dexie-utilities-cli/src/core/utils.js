@@ -93,10 +93,20 @@ function tokenizeName(name) {
   }, []);
 }
 
+function cvtObj2ReactPropsString(obj) {
+  const props = [];
+  for (const [name, value] of Object.entries(obj)) {
+    props.push(`${name}={${JSON.stringify(value)}}`);
+  }
+
+  return props.join(" ");
+}
+
 module.exports = {
   cvtColumnName2TSPropName,
   cvtColumnType2TSType,
   cvtColumnType2YupSchemaType,
+  cvtObj2ReactPropsString,
   readFileContentSync,
   generateCodeOnFly,
   splashify,

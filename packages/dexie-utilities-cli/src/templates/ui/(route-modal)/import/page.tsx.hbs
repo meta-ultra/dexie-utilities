@@ -77,7 +77,7 @@ export default function Page() {
   const downloadTemplate = useEvent(() => {
     const bordered = {border: {top:{style: "thin", color: "00000000"}, right:{style: "thin", color: "00000000"}, bottom:{style: "thin", color: "00000000"}, left:{style: "thin", color: "00000000"}}};
     const workbook = XLSX.utils.book_new();
-    const header0 = [{{#each $ui}}{{#unless (isNilorEmpty this.title)}}{{#unless this.isRef}}, "{{this.title}}"{{/unless}}{{/unless}}{{/each}}].slice(1);
+    const header0 = [{{#each $ui}}{{#unless (isNilorEmpty this.title)}}{{#unless this.isRef}}{{#if (isAvailableImportTableColumnControls this.controls)}}{{#unless this.nonEditable}}, "{{this.title}}"{{/unless}}{{/if}}{{/unless}}{{/unless}}{{/each}}].slice(1);
     const worksheet = XLSX.utils.aoa_to_sheet([
       header0.map((value) => ({ v: value, t: "s", s: { ...bordered, alignment: { horizontal: "center", vertical: "center", wrapText: false }, fill: { fgColor: { rgb: "FFCC00" } } }})),
     ]);
@@ -142,8 +142,8 @@ export default function Page() {
                             for (let i = 0; i < array.length; i++) {
                               const cols = Object.values(array[i] as object);
                               let idx = 0;
-                              let record: any = { {{#each $ui}}{{#unless (isNilorEmpty this.title)}}{{#unless this.isRef}}
-                                {{@key}}: cols[idx++], {{/unless}}{{/unless}}{{/each}}
+                              let record: any = { {{#each $ui}}{{#unless (isNilorEmpty this.title)}}{{#unless this.isRef}}{{#if (isAvailableImportTableColumnControls this.controls)}}{{#unless this.nonEditable}}
+                                {{@key}}: cols[idx++], {{/unless}}{{/if}}{{/unless}}{{/unless}}{{/each}}
                               };
                               // deduplicate
                               record = differenceWith([record], records, isEqual)[0];

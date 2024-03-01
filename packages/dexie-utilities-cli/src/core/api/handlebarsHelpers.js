@@ -4,10 +4,13 @@ const Handlebars = require("handlebars");
 /**
  * Frame the yup schema. 
  */
-const frameRouteHandlersYupSchema = (field, strict) => {
+const frameRouteHandlersYupSchema = (field, strict, isQueryForm) => {
   let schema = [];
   if (/^files?$/i.test(field.yup.type)) {
     schema.push("files()");
+  }
+  if (/^date$/i.test(field.yup.type)) {
+    schema.push(`date${isQueryForm === true ? 's' : ''}()`);
   }
   else {
     schema = [`${field.yup.type === "integer" ? "number" : field.yup.type}()`];
@@ -33,10 +36,10 @@ const frameRouteHandlersYupSchema = (field, strict) => {
         schema.push(`matches(RegExp("${regexp}"))`);
       }
     }
+  }
 
-    if (strict === true && field.required) {
-      schema.push("required()");
-    }
+  if (strict === true && field.required) {
+    schema.push("required()");
   }
 
   return schema.length ? new Handlebars.SafeString(schema.join(".")) : "";

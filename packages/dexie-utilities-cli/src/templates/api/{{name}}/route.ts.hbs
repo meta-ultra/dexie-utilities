@@ -21,7 +21,7 @@ const searchParamsSchemaOfGet = yup.object({
   {{/with}}
   {{/unless}} --}}
   {{#each $route-handlers}}
-  {{@key~}}: yup.{{~frameRouteHandlersYupSchema this~}},
+  {{@key~}}: yup.{{~frameRouteHandlersYupSchema this false true~}},
   {{/each}}
 });
 export const GET = withValidation(
@@ -124,13 +124,6 @@ export const DELETE = withValidation(
   }
 );
 
-const base64Schema = yup.string().matches(/^data\s*:\s*[^:;]+;\s*base64\s*,/i)
-const fileSchema = yup.mixed().test((value) => value instanceof File || base64Schema.isValidSync(value)); 
-const fileListSchema = yup.array().of(fileSchema);
-const filesSchema = yup.mixed().test((value) => {
-  return fileSchema.isValidSync(value) || fileListSchema.isValidSync(value);
-});
-
 const singleBodySchemaOfPost = yup.object({
   {{#each $route-handlers}}
   {{@key~}}: yup.{{frameRouteHandlersYupSchema this true}},
@@ -161,9 +154,10 @@ export const POST = withValidation(
           /* Dexie START */
           await Promise.all(
             records.map(async (record) => {
-              record = await dataUrify(objectify(record));
-              if (!await $table.where(pickPrimitive(record)).count()) {
-                await $table.add({...record as any});
+              {{!-- record = await dataUrify(objectify(record)); --}}
+              const dexieRecord = objectify(record);
+              if (!await $table.where(pickPrimitive(dexieRecord)).count()) {
+                await $table.add({...dexieRecord as any});
               }
             })
           )
@@ -171,10 +165,11 @@ export const POST = withValidation(
         } 
       }
       else {
-        let record = data instanceof FormData ? data : singleBodySchemaOfPost.cast(data);
+        const record = data instanceof FormData ? data : singleBodySchemaOfPost.cast(data);
         /* Dexie START */
-        record = await dataUrify(objectify(record));
-        await $table.add(singleBodySchemaOfPost.cast(record) as any);
+        {{!-- record = await dataUrify(objectify(record)); --}}
+        const dexieRecord = objectify(record);
+        await $table.add(singleBodySchemaOfPost.cast(dexieRecord) as any);
         /* Dexie END */
       }
       return NextResponse.json({code: 0});

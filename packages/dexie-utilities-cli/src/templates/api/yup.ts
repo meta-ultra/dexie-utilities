@@ -7,11 +7,15 @@ const filesSchema = yup.mixed().test((value) => {
   return fileSchema.isValidSync(value) || fileListSchema.isValidSync(value);
 });
 
+const datesSchema = yup.mixed().test((value) => yup.array().of(yup.date()).isValidSync(value) || yup.date().isValidSync(value));
+
 const $yup: typeof yup & {
-  files: any
+  files: any;
+  dates: any;
 } = {
   ...yup,
   files: () => filesSchema,
+  dates: () => datesSchema,
 };
 
 export default $yup;

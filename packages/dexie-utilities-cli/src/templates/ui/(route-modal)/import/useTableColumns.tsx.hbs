@@ -11,6 +11,8 @@ export default function useTableColumns(onDelete: (id: number) => void) {
       {{#each $ui}}
       {{#unless (isNilorEmpty this.title)}}
       {{#unless this.isRef}}
+      {{#if (isAvailableImportTableColumnControls this.controls)}}
+      {{#unless this.nonEditable}}
       { title: "{{this.title}}", dataIndex: "{{@key}}", key: "{{@key}}", sorter: {{this.table-column.sorter}}, align: "{{this.table-column.align}}" as "{{this.table-column.align}}", width: {{this.table-column.width}}, 
         render(value: any, record: any) {
         {{#if this.isRef}}
@@ -20,6 +22,8 @@ export default function useTableColumns(onDelete: (id: number) => void) {
         {{/if}}
         }
       },
+      {{/unless}}
+      {{/if}}
       {{/unless}}
       {{/unless}}
       {{/each}}

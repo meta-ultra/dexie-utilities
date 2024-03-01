@@ -1,17 +1,5 @@
-import { isArray, groupBy, capitalize, isEmpty, get, isFunction } from "lodash-es";
+import { groupBy, capitalize, isEmpty, get, isFunction } from "lodash-es";
 import { type Table } from "dexie";
-
-/**
- * filter out properties of which value is an array. 
- */
-const getQueryParams = (params?: object): Record<string, any> => {
-  return Object.entries(params || {}).reduce((queryParams, [name, value]) => {
-    if (!isArray(value)) {
-      queryParams[name] = value;
-    }
-    return queryParams;
-  }, {} as Record<string, any>)
-};
 
 /**
  * separate nested keys such as "villager.groupId" from direct keys like "name".
@@ -58,4 +46,4 @@ const getNestedValue = async (
   return get(record, nestedKeys.join("."));
 };
 
-export { getQueryParams, groupQueryKeys, getNestedValue };
+export { groupQueryKeys, getNestedValue };

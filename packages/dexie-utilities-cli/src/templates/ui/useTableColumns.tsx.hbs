@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { Space } from "antd";
+import dayjs from "dayjs";
 import { useNavigate } from 'react-router-dom';
 import { AiOutlineEdit, AiOutlineDelete } from "react-icons/ai";
 
@@ -12,14 +13,27 @@ export default function useTableColumns() {
       {{#unless (isNilorEmpty this.title)}}
       {{#if (isAvailableTableColumnControls this.controls)}}
       { title: "{{this.title}}", dataIndex: "{{@key}}", key: "{{@key}}", sorter: {{this.table-column.sorter}}, align: "{{this.table-column.align}}" as "{{this.table-column.align}}", width: {{this.table-column.width}}, 
+        {{#each this.table-column.props}}{{@key}}: {{~this~}}, {{/each}}
         render(value: any, record: any) {
         {{#if this.isRef}}
           return record["{{getForeignPropertyName @key}}"]["{{getForeignFieldName this.controls.label}}"];
         {{else}}{{#if (isImage this.controls)}}
-          return <img src={value} className='w-full h-10 lg:h-20'/>;
+          if (typeof value === "string" && value) {
+            if (
+              /^\s*data\s*:\s*image\/[^;];\s*base64\s*,/.test(value) || 
+              (value.length < 200 && /\.(jpe?g|bmp|gif|a?png|svg|webp|ico)$/i.test(value))
+            ) {
+              return <img src={value} className='w-full h-10 lg:h-20'/>;
+            }
+            else {
+              return <a href={value} download>下载</a>
+            }
+          }
+        {{else}}{{#if (isDate this.type)}}
+          return value ? dayjs(value).format("{{this.controls.format}}") : value;
         {{else}}
           return value;
-        {{/if}}{{/if}}
+        {{/if}}{{/if}}{{/if}}
         }
       },
       {{/if}}

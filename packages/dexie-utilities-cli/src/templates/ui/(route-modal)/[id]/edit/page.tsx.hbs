@@ -5,11 +5,13 @@ import { {{this}} } from "{{@key}}";
 {{/each}}
 import { useMutation, useSuspenseQuery } from '@tanstack/react-query';
 import useEvent from 'react-use-event-hook';
-import { useRouteModalContext } from '@/components/@meta-ultra/antd-plus';
+import dayjs from "dayjs";
+import { cloneDeep } from "lodash-es";
+import { useRouteModalContext, cvtDayjs2Date } from '@/components/@meta-ultra/antd-plus';
 import { usePopup } from '@/utils/PopupContext';
 import $axios from '@/utils/$axios';
 {{#unless (isNilorEmpty $ui-foreigns)}}
-import { isArray, isNumber } from "lodash-es";
+import { isArray, isNumber, cloneDeep } from "lodash-es";
 {{/unless }}
 
 export default function Page({params}: {params: {id: string}}) {
@@ -40,7 +42,30 @@ export default function Page({params}: {params: {id: string}}) {
   const [formRef] = Form.useForm();
   const mutation = useMutation({
     mutationFn() {
-      return $axios.put(`/api/{{pluralizeKebabCase tableName}}/${params.id}`, formRef.getFieldsValue());
+      let data = Object.assign({}, formRef.getFieldsValue() || {});
+      // for datetime
+      {{#each $ui}}
+      {{#if (isDate this.type)}}
+      data["{{@key}}"] = cvtDayjs2Date(data["{{@key}}"]);
+      {{/if}}
+      {{/each}}
+
+      {{!-- const entries = Object.entries(data);
+      const hasFile = !!entries.find(([name, value]) => isArray(value));
+      if (hasFile) {
+        data = new FormData();
+        for (const [name, value] of entries) {
+          if (isArray(value)) {
+            for (const item of value) {
+              data.append(name, (item as unknown as {originFileObj: File}).originFileObj);
+            }
+          }
+          else if (value != undefined) {
+            data.append(name, value);
+          }
+        }
+      } --}}
+      return $axios.put(`/api/{{pluralizeKebabCase tableName}}/${params.id}`, data);
     }
   });
 
@@ -78,7 +103,23 @@ export default function Page({params}: {params: {id: string}}) {
   }, [mutation.isPending]);
 
   useEffect(() => {
-    formRef.setFieldsValue(record);
+    const kvs = cloneDeep(record);
+    {{#each $ui}}
+    {{#if (isImage this.controls)}}
+    //@ts-ignore
+    kvs["{{@key}}"] = [{
+      key: "{{@key}}",
+      url: kvs["{{@key}}"],
+      status: "done",
+    }];
+    {{/if}}
+    {{#if (isDate this.type)}}
+    //@ts-ignore
+    kvs["{{@key}}"] = dayjs(kvs["{{@key}}"]);
+    {{/if}}
+    {{/each}}
+
+    formRef.setFieldsValue(kvs);
   }, [record]);
 
   return (
@@ -87,9 +128,11 @@ export default function Page({params}: {params: {id: string}}) {
         <section className='flex flex-row flex-wrap gap-form'>
           {{#each $ui}}
           {{#unless (isNilorEmpty this.title)}}
+          {{#unless this.nonEditable}}
           <Form.Item rootClassName={"{{getFormItemClassName 'basis-form-1/2 lg:basis-form-1/4' this.controls}}"} label={"{{this.title}}"} name={"{{@key}}"} rules={[{required: {{this.required~}} }]}>
             {{getFormControls @key this}}
           </Form.Item>
+          {{/unless}}
           {{/unless}}
           {{/each}}
         </section>
