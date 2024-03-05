@@ -149,7 +149,7 @@ const isAvailableTableColumnControls = (controls) => {
   if (isNilorEmpty(type) || /^\s*$/.test(type)) {
     return false;
   }
-  else if (/^(Input|Input\.TextArea|Picture.*|Select|DatePicker)$/i.test(type)) {
+  else if (/^(Input|Input\.TextArea|Picture.*|(Tree)?Select|DatePicker)$/i.test(type)) {
     return true;
   }
   else {

@@ -22,7 +22,7 @@ export default function Page() {
   useEffect(() => {
       const treeData{{~pluralizeUpperCamelCase (getForeignPropertyName this.[0])}} = cvt2TreeData({{pluralize (getForeignPropertyName this.[0])}}, {
         idPropName: "{{getPrimaryKeyPropName ../$ui}}",
-        childrenPropName: "{{pluralizeLowerCamelCase ../tableName}}",
+        childrenPropName: "{{pluralizeLowerCamelCase this.[1].foreignTableName}}",
         title: (item: any) => {
           return <TreeNodeTitle item={item} />;
         }
