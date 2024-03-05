@@ -1,7 +1,7 @@
 const Handlebars = require("handlebars");
 const { tokenizeReference, cvtObj2ReactPropsString } = require("../utils.js");
-const { pluralize, getForeignPropertyName, isNilorEmpty } = require("../commonHandlebarsHelpers.js");
-const { isEmpty, isString } = require("lodash");
+const { pluralize, getForeignPropertyName, isNilorEmpty, pluralizeUpperCamelCase } = require("../commonHandlebarsHelpers.js");
+const { isEmpty, isString, camelCase } = require("lodash");
 
 const parseDayjsFormat = (format) => /^(YYYY)(?:[-/]?(MM)(?:[-/]?(DD)\s*(?:(HH)(?::?(mm)(?::?(ss))?)?)?)?)?$/.exec(format);
 
@@ -77,6 +77,20 @@ const getFormControls = (columnName, $uiColumn, isQueryForm) => {
   else if (/^Select$/i.test($uiColumn.controls.type)) {
     controls = `<Select allowClear showSearch filterOption={(input, option) => !!(option && option.children && option.children.indexOf(input as any) !== -1)}>{${pluralize(getForeignPropertyName(columnName))} && ${pluralize(getForeignPropertyName(columnName))}.map((${$uiColumn.controls.dataSource}) => (<Select.Option key={${$uiColumn.controls.value}} value={${$uiColumn.controls.value}}>{${$uiColumn.controls.label}}</Select.Option>))}</Select>`;
   }
+  else if (/^TreeSelect$/i.test($uiColumn.controls.type)) {
+    controls = `<TreeSelect
+                allowClear
+                showSearch
+                filterTreeNode={(inputValue: string, treeNode: any) => {
+                  const entries = Object.entries(treeNode).filter(([name, value]) => typeof value === "string");
+                  return !!entries.find(([name, value]) => value && String(value).indexOf(inputValue) !== -1);
+                }}
+                className='!w-full'
+                dropdownStyle={{ maxHeight: 400, overflow: 'auto' }}
+                treeDefaultExpandAll
+                treeData={treeData${pluralizeUpperCamelCase(getForeignPropertyName(columnName))}}
+              />`
+  }
   else {
     const {type, package, ...props} = $uiColumn.controls;
     if (isEmpty(props)) {
@@ -109,7 +123,7 @@ const isAvailableExportTableColumnControls = (controls) => {
   if (isNilorEmpty(type) || /^\s*$/.test(type)) {
     return false;
   }
-  else if (/^(Input|Input\.TextArea|Select|DatePicker)$/i.test(type)) {
+  else if (/^(Input|Input\.TextArea|(Tree)?Select|DatePicker)$/i.test(type)) {
     return true;
   }
   else {
@@ -122,7 +136,7 @@ const isAvailableImportTableColumnControls = (controls) => {
   if (isNilorEmpty(type) || /^\s*$/.test(type)) {
     return false;
   }
-  else if (/^(Input|Input\.TextArea|DatePicker)$/i.test(type)) {
+  else if (/^(Input|Input\.TextArea|InputNumber|DatePicker)$/i.test(type)) {
     return true;
   }
   else {
@@ -147,6 +161,9 @@ const getFormItemClassName = (defaultClassName, controls) => {
   if (/^(Input\.TextArea|Picture.*)$/i.test(controls.type)) {
     return "basis-full";
   }
+  else if (/^TreeSelect$/i.test(controls.type)) {
+    return "basis-full lg:basis-form-1/2";
+  }
   else {
     return defaultClassName;
   }
@@ -168,6 +185,36 @@ const isImage = (controls) => {
   return /^picture/i.test(type);
 };
 
+const isTreeSelect = (fieldName, $ui) => {
+  const $uiColumn = $ui[fieldName];
+  if ($uiColumn && $uiColumn.controls) {
+    return $uiColumn.controls.type === "TreeSelect";
+  }
+  return false;
+}
+
+const getPrimaryKeyPropName = ($ui) => {
+  let idName = undefined;
+  for (const name in $ui) {
+    if ($ui[name].isPrimaryKey) {
+      idName = name;
+      break;
+    }
+  }
+  return idName;
+}
+
+const getTreeItemTitlePropName = ($ui) => {
+  const candidates = ["title", "name", "label", "text"];
+  for (const candidate of candidates) {
+    if ($ui[candidate]) {
+      return candidate;
+    }
+  }
+
+  throw Error("[@metra-ultra/cli] Can not find proper candidate properties as the title of tree item.");
+}
+
 module.exports = {
   getAntdControlsNamedImports,
   getAdditionalPackageControlsNamedImports,
@@ -180,4 +227,7 @@ module.exports = {
   getFormItemClassName,
   isImage,
   isDate,
+  isTreeSelect,
+  getPrimaryKeyPropName,
+  getTreeItemTitlePropName,
 };

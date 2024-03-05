@@ -16,16 +16,19 @@ function generateUICode(metadata) {
   for (const [tableName, tableMetadata] of Object.entries(metadata)) {
     for (const [absolutePath, relativePath] of paths) {
       if (/\.hbs$/i.test(relativePath)) {
-        files[`${pluralizeKebabCase(tableName)}${relativePath.replace(templateDirRelativePath, "").replace(/\.hbs$/i, "")}`] = generateCodeOnFly(
-          absolutePath, 
-          {
-            tableName,
-            $table: tableMetadata.table,
-            $ui: tableMetadata.$ui,
-            "$ui-foreigns": tableMetadata["$ui-foreigns"],
-            "$ui-many": tableMetadata["$ui-many"],
-          }
-        );
+        const excludedRE = tableMetadata.$table.type === "self-reference" ? /\.table\.hbs$/i : /\.tree\.hbs$/i;
+        if (!excludedRE.test(relativePath)) {
+          files[`${pluralizeKebabCase(tableName)}${relativePath.replace(templateDirRelativePath, "").replace(/(\.(tree|table))?\.hbs$/i, "")}`] = generateCodeOnFly(
+            absolutePath, 
+            {
+              tableName,
+              $table: tableMetadata.$table,
+              $ui: tableMetadata.$ui,
+              "$ui-foreigns": tableMetadata["$ui-foreigns"],
+              "$ui-many": tableMetadata["$ui-many"],
+            }
+          );
+        }
       }
       else {
         files[`${pluralizeKebabCase(tableName)}${relativePath.replace(templateDirRelativePath, "")}`] = readFileContentSync(absolutePath);

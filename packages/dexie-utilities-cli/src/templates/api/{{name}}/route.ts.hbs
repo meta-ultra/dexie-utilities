@@ -9,12 +9,14 @@ import { db, I{{~upperCamelCase tableName~}}TableName, I{{upperCamelCase tableNa
 const $table = db[I{{~upperCamelCase tableName~}}TableName];
 
 const searchParamsSchemaOfGet = yup.object({
+  {{#unless (isSelfReference $table)}}
   page: yup.number().integer().min(1),
   pageSize: yup.number().integer().min(1),
   sorter: yup.object({
     field: yup.string(),
     order: yup.string(),
   }),
+  {{/unless}}
   {{!-- {{#unless (isNilorEmpty (getPrimaryField fields))}}
   {{#with (getPrimaryField fields)}}
   {{this.[0]}}s: yup.array().of(yup.{{frameYupSchema this.[1]}}),
@@ -28,6 +30,34 @@ export const GET = withValidation(
   { searchParamsSchema: searchParamsSchemaOfGet },
   async function (request: NextRequest, context: NextContext) {
     try {
+      {{#if (isSelfReference $table)}}
+      /* Dexie START */
+      let data = await $table.filter((record) => record.{{getSelfReferencePropName $table}} === undefined).toArray() as {{upperCamelCase tableName}}[];
+      const load = async (data: any[]) => {
+        while (data && data.length) {
+          await Promise.all(data.map(async (record: Dept) => {
+            await Promise.all([
+              {{#each $route-handlers-foreigns}}
+              await record.load{{~upperCamelCase (getForeignPropertyName this.[0])~}}(),
+              {{/each}}
+              {{#each (filterRouteHandlersMany $route-handlers-many)}}
+              await record.load{{~upperCamelCase (pluralizeLowerCamelCase this.[1].manyTableName)~}}(),
+              {{/each}}
+            ])
+          }));
+          data = data.flatMap((record) => {
+            return record.{{pluralizeLowerCamelCase tableName}} || [];
+          });
+        }
+      };
+      await load(data);
+      /* Dexie END */
+ 
+      return NextResponse.json({
+        code: 0,
+        data,
+      });
+      {{else}}
       const { page, pageSize, sorter, ...rest } = searchParamsSchemaOfGet.cast(objectify(request.nextUrl.searchParams));
       /* Dexie START */
       const { total, data } = await query($table, rest, page, pageSize, sorter);
@@ -55,6 +85,7 @@ export const GET = withValidation(
           data,
         }
       });
+      {{/if}}
     }
     catch(e) {
       return NextResponse.json({

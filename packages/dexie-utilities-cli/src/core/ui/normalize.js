@@ -21,20 +21,29 @@ function getUITitle(metadata, ui, columnName, column) {
  * @param {*} column - one of the original columns property defined by user.
  * @returns 
  */
-function setControls($uiColumn, ui, yup, columnName, column) {
+function setControls($uiColumn, ui, yup, columnName, column, $table) {
   if (column["primary-key"]) return;
 
   if (column["foreign-key-references"]) {
     const {package, type, dataSource, value, label, ...props} = get(ui, `${columnName}.controls`) || {};
-    const [foreignTableName, condition, foreignFieldName] = tokenizeReference(column["foreign-key-references"]);
-    $uiColumn.controls = {
-      package: package || "antd",
-      type: type || "Select",
-      dataSource: dataSource || foreignTableName,
-      value: (value || [foreignTableName, foreignFieldName].join(".")).split(".").map((part) => camelCase(part)).join("."),
-      label: (label || [foreignTableName, foreignFieldName].join(".")).split(".").map((part) => camelCase(part)).join("."),
-      ...props,
-    };
+    if ($table.type === "self-reference" && $table.selfReferenceColumnName === columnName) {
+      $uiColumn.controls = {
+        package: "antd",
+        type: "TreeSelect",
+        label: (label || [foreignTableName, foreignFieldName].join(".")).split(".").map((part) => camelCase(part)).join("."),
+      }
+    }
+    else {
+      const [foreignTableName, condition, foreignFieldName] = tokenizeReference(column["foreign-key-references"]);
+      $uiColumn.controls = {
+        package: package || "antd",
+        type: type || "Select",
+        dataSource: dataSource || foreignTableName,
+        value: (value || [foreignTableName, foreignFieldName].join(".")).split(".").map((part) => camelCase(part)).join("."),
+        label: (label || [foreignTableName, foreignFieldName].join(".")).split(".").map((part) => camelCase(part)).join("."),
+        ...props,
+      };
+    }
   }
   else if ($uiColumn.type === "Date") {
     const {package, type, format, ...props} = get(ui, `${columnName}.controls`) || {};
@@ -99,16 +108,6 @@ function setUITableColumn($uiColumn, ui, columnName) {
     }
   }
   tableColumn["props"] = props;
-
-  // tableColumn["sorter"] = get(ui, `table-columns.${columnName}.sorter`);
-  // if (tableColumn["sorter"] === undefined) {
-  //   tableColumn["sorter"] = true;
-  // }
-  // tableColumn["width"] = get(ui, `table-columns.${columnName}.width`);
-  // if (tableColumn["width"] === undefined) {
-  //   tableColumn["width"] = ($uiColumn.title ? $uiColumn.title.length * 80 : "undefined");
-  // }
-  // tableColumn["align"] = get(ui, `table-columns.${columnName}.align`) || "center";
 }
 
 function frame$UI(metadata, tableName, columnName, ui, yup) {
@@ -116,6 +115,7 @@ function frame$UI(metadata, tableName, columnName, ui, yup) {
   const $ui = metadata[tableName]["$ui"] = metadata[tableName]["$ui"] || {};
   const name = cvtColumnName2TSPropName(columnName);
   $ui[name] = {
+    isPrimaryKey: !!column["primary-key"],
     title: getUITitle(metadata, ui, columnName, column),
     type: cvtColumnType2TSType(column.type),
     required: getUIRequired(ui, columnName, column),
@@ -127,7 +127,7 @@ function frame$UI(metadata, tableName, columnName, ui, yup) {
     },
   };
 
-  setControls($ui[name], ui, yup, columnName, column);
+  setControls($ui[name], ui, yup, columnName, column, metadata[tableName]["$table"]);
   setUITableColumn($ui[name], ui, columnName);
 }
 

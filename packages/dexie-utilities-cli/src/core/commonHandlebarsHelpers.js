@@ -1,4 +1,4 @@
-const { isEmpty, uniq, concat, join, get, isNil, lowerCase, camelCase, upperFirst, capitalize, kebabCase } = require("lodash");
+const { isEqual, isEmpty, uniq, concat, join, get, isNil, lowerCase, camelCase, upperFirst, capitalize, kebabCase } = require("lodash");
 const { tokenizeName } = require("./utils.js");
 
 const pluralize = (x) => {
@@ -41,6 +41,10 @@ const pluralizeLowerCamelCase = (fieldName) => {
   return pluralize(camelCase(fieldName));
 };
 
+const pluralizeUpperCamelCase = (fieldName) => {
+  return pluralize(upperCamelCase(fieldName));
+};
+
 const pluralizeKebabCase = (fieldName) => {
   return pluralize(kebabCase(fieldName));
 };
@@ -58,7 +62,16 @@ const getForeignPropertyName = (fieldName) => {
   return tokens.map((token, i) => i === 0 ? token : capitalize(token)).join("");
 };
 
+const isSelfReference = ($table) => {
+  return $table.type === "self-reference";
+}
+
+const getSelfReferencePropName = ($table) => {
+  return camelCase($table.selfReferenceColumnName);
+}
+
 module.exports = {
+  isEqual,
   uniq,
   concat,
   get,
@@ -69,6 +82,9 @@ module.exports = {
   isNilorEmpty,
   upperCamelCase,
   pluralizeLowerCamelCase,
+  pluralizeUpperCamelCase,
   pluralizeKebabCase,
   getForeignPropertyName, 
+  isSelfReference,
+  getSelfReferencePropName,
 };

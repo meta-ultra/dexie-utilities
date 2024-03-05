@@ -4,19 +4,42 @@ import { useQuery } from '@tanstack/react-query';
 import useEvent from 'react-use-event-hook';
 import dayjs from "dayjs";
 import * as XLSX from "xlsx-js-style";
-import { groupBy, debounce } from 'lodash-es';
+import { groupBy, debounce, isNil } from 'lodash-es';
 import { AiOutlineLoading3Quarters, AiFillCheckCircle, AiFillCloseCircle } from "react-icons/ai";
 import { useRouteModalContext } from '@/components/@meta-ultra/antd-plus';
 import $axios from '@/utils/$axios';
 
+{{#if (isSelfReference $table)}}
+function flatMapSelfReferenceTree(treeNodes: any[], result: any[] = []) {
+  for (let i = 0; i < treeNodes.length; ++i) {
+    const treeNode = treeNodes[i];
+    if (treeNode) {
+      result.push(treeNode);
+      if (treeNode.{{pluralizeLowerCamelCase tableName}} && treeNode.{{pluralizeLowerCamelCase tableName}}.length) {
+        flatMapSelfReferenceTree(treeNode.{{pluralizeLowerCamelCase tableName}}, result);
+      }
+    }
+  }
+
+  return result;
+}
+{{/if}}
+
 export default function Page() {
+  {{#if (isSelfReference $table)}}
+  let { isLoading, data } = useQuery<any[]>({
+    queryKey: ["/api/{{pluralizeKebabCase tableName}}"],
+    queryFn: ({queryKey}) => $axios.get(queryKey[0] as string)
+  });
+  {{else}}
   const location = useLocation();
-  const context = useRouteModalContext();
   const { isLoading, data: dataSource = {data: [], total: 0} } = useQuery<{data: any[], total: number}>({
     queryKey: ["/api/{{pluralizeKebabCase tableName}}", location.state && location.state.queries],
     queryFn: ({queryKey}) => $axios.get(queryKey[0] as string, {params: queryKey[1]})
   });
+  {{/if}}
   
+  const context = useRouteModalContext();
   useEffect(() => {
     if (context) {
       context.setModalProps({
@@ -33,14 +56,23 @@ export default function Page() {
   const exportExcel = useEvent(debounce(() => {
     try {
       const rows = [];
+      {{#if (isSelfReference $table)}}
+      data = flatMapSelfReferenceTree(data || []);
+      for (let i = 0; i < data.length; ++i) {
+      {{else}}
       for (let i = 0; i < dataSource.data.length; ++i) {
+      {{/if}}
         const row: any[] = [];
+        {{#if (isSelfReference $table)}}
+        const record = data[i];
+        {{else}}
         const record = dataSource.data[i];
+        {{/if}}
         {{#each $ui}}{{#unless (isNilorEmpty this.title)}}{{#if this.isRef}}
-        row.push(record["{{getForeignPropertyName @key}}"]["{{getForeignFieldName this.controls.label}}"]);
+        row.push(record["{{getForeignPropertyName @key}}"] && record["{{getForeignPropertyName @key}}"]["{{getForeignFieldName this.controls.label}}"] || "-");
         {{else}}{{#if (isAvailableExportTableColumnControls this.controls)}}{{#if (isDate this.type)}}
         row.push(record["{{@key}}"] && dayjs(record["{{@key}}"]).isValid() ? dayjs(record["{{@key}}"]).format("{{this.controls.format}}") : "");{{else}}
-        row.push(record["{{@key}}"]);{{/if}}{{/if}}{{/if}}{{/unless}}{{/each}}
+        row.push(isNil(record["{{@key}}"]) ? "-" : record["{{@key}}"]);{{/if}}{{/if}}{{/if}}{{/unless}}{{/each}}
 
         rows.push(row);
       }

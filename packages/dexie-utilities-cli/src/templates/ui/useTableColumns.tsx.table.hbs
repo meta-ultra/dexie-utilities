@@ -16,7 +16,7 @@ export default function useTableColumns() {
         {{#each this.table-column.props}}{{@key}}: {{~this~}}, {{/each}}
         render(value: any, record: any) {
         {{#if this.isRef}}
-          return record["{{getForeignPropertyName @key}}"]["{{getForeignFieldName this.controls.label}}"];
+          return record["{{getForeignPropertyName @key}}"] && record["{{getForeignPropertyName @key}}"]["{{getForeignFieldName this.controls.label}}"];
         {{else}}{{#if (isImage this.controls)}}
           if (typeof value === "string" && value) {
             if (

@@ -2,7 +2,7 @@ import { Table } from "dexie";
 import { db } from "../../db";
 {{#unless (isNilorEmpty (filterDexieMany $dexie-many))}} import { pick, isEqual } from "lodash-es";{{/unless}}
 import { type I{{~upperCamelCase tableName~}}, I{{~upperCamelCase tableName~}}TableName } from "./I{{~upperCamelCase tableName~}}";
-{{#each (getDexieForeignManyTableNames $dexie-foreigns $dexie-many)}}
+{{#each (getDexieForeignManyTableNames $dexie-foreigns $dexie-many tableName)}}
 import { type I{{~upperCamelCase this~}}, I{{~upperCamelCase this~}}TableName, {{upperCamelCase this}} } from "../I{{~upperCamelCase this~}}";
 {{/each}}
 
@@ -57,6 +57,10 @@ export class {{upperCamelCase tableName}} implements I{{~upperCamelCase tableNam
     this.{{~pluralizeLowerCamelCase this.[1].manyTableName}} = await db[I{{~upperCamelCase this.[1].manyTableName~}}TableName].filter((record) => {
       return record.{{this.[1].manyColumnName}} === this.{{~this.[0]~}};
     }).toArray() as {{upperCamelCase this.[1].manyTableName~}}[];
+
+    {{#if (isEqual this.[1].manyTableName tableName)}}
+    await Promise.all(this.{{~pluralizeLowerCamelCase tableName~}}.map(async (item) => await item.load{{~pluralizeLowerCamelCase tableName~}}()));
+    {{/if}}
   }
   {{/each}}
 }

@@ -1,19 +1,39 @@
-import { useEffect } from 'react'
-import { Button, Form, {{getAntdControlsNamedImports $ui}} } from "antd";
+import { useEffect, useState } from 'react'
+import { type TreeSelectProps, Button, Form, {{getAntdControlsNamedImports $ui}} } from "antd";
 {{#each (getAdditionalPackageControlsNamedImports $ui)}}
 import { {{this}} } from "{{@key}}";
 {{/each}}
 import { useMutation, useSuspenseQuery } from '@tanstack/react-query';
+import { useLocation } from 'react-router-dom';
 import useEvent from 'react-use-event-hook';
-import { useRouteModalContext, cvtDayjs2Date } from '@/components/@meta-ultra/antd-plus';
+import { useRouteModalContext, cvtDayjs2Date, cvt2TreeData } from '@/components/@meta-ultra/antd-plus';
 import { usePopup } from '@/utils/PopupContext';
 import $axios from '@/utils/$axios';
+import TreeNodeTitle from "../../TreeDataTitle";
 {{#unless (isNilorEmpty $ui-foreigns)}}
 import { isArray, isNumber } from "lodash-es";
 {{/unless }}
 
 export default function Page() {
   {{#each $ui-foreigns}}
+  {{#if (isTreeSelect this.[0] ../$ui)}}
+  const {data: {{pluralize (getForeignPropertyName this.[0])~}} } = useSuspenseQuery({
+    queryKey: [`/api/{{pluralizeKebabCase this.[1].foreignTableName}}`],
+    queryFn: ({queryKey}) => $axios.get(queryKey[0] as string)
+  });
+  const [treeData{{~pluralizeUpperCamelCase (getForeignPropertyName this.[0])~}}, setTreeData{{~pluralizeUpperCamelCase (getForeignPropertyName this.[0])~}}] = useState<TreeSelectProps["treeData"]>();
+  useEffect(() => {
+      const treeData{{~pluralizeUpperCamelCase (getForeignPropertyName this.[0])}} = cvt2TreeData({{pluralize (getForeignPropertyName this.[0])}}, {
+        idPropName: "{{getPrimaryKeyPropName ../$ui}}",
+        childrenPropName: "{{pluralizeLowerCamelCase ../tableName}}",
+        title: (item: any) => {
+          return <TreeNodeTitle item={item} />;
+        }
+      });
+
+      setTreeData{{~pluralizeUpperCamelCase (getForeignPropertyName this.[0])~}}(treeData{{~pluralizeUpperCamelCase (getForeignPropertyName this.[0])~}});
+  }, [{{pluralize (getForeignPropertyName this.[0])}}]);
+  {{else}}
   const {data: {{pluralize (getForeignPropertyName this.[0])~}} } = useSuspenseQuery({
     queryKey: [`/api/{{pluralizeKebabCase this.[1].foreignTableName}}`, {{{this.[1].foreignCondition}}}],
     async queryFn({queryKey}) {
@@ -26,8 +46,10 @@ export default function Page() {
       }
     }
   });
+  {{/if}}
   {{/each}}
 
+  const location = useLocation();
   const context = useRouteModalContext();
   const { message } = usePopup();
   const [formRef] = Form.useForm();
@@ -78,6 +100,12 @@ export default function Page() {
       }
     }
   });
+
+  useEffect(() => {
+    if (formRef && location.state) {
+      formRef.setFieldsValue(location.state);
+    }
+  }, [formRef, location.state]);
 
   useEffect(() => {
     if (context) {

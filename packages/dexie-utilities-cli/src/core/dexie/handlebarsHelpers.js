@@ -38,11 +38,16 @@ const getDexieManyTableNames = ($dexieMany) => {
 /**
  * Returns the dudeplicated foreign table names for named import statement.
  */
-const getDexieForeignManyTableNames = ($dexieForeigns, $dexieMany) => {
+const getDexieForeignManyTableNames = ($dexieForeigns, $dexieMany, tableName) => {
   const dexieForeignTableNames = getDexieForeignTableNames($dexieForeigns);
   const dexieManyTableNames = getDexieManyTableNames($dexieMany);
   
-  return uniq(concat(dexieForeignTableNames, dexieManyTableNames));
+  let names = uniq(concat(dexieForeignTableNames, dexieManyTableNames));
+  if (typeof tableName === "string") {
+    names = names.filter((name) => name !== tableName);
+  }
+
+  return names;
 };
 
 /**

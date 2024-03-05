@@ -89,7 +89,7 @@ if (!parsed.options.h && !parsed.options.v) {
     }
 
     normalize(metadata);
-    // console.log(JSON.stringify(metadata["user"]["$ui"], null, 2));
+    console.log(JSON.stringify(metadata["dept"]["$table"], null, 2));
     const { dexie, api, ui } = generateCode(metadata, databasePackage);
     await Promise.all([
       outputCode(dbOutputPath, dexie),

@@ -6,9 +6,21 @@ const { frame$UI, frame$UIForeigns, frame$UIMany, sort$UI } = require("./ui/norm
 
 const nagging = new Nagging();
 
-function frame$Table(metadata, tableName, table) {
+function frame$Table(metadata, tableName, table, columns) {
   const $table = metadata[tableName]["$table"] = {};
   $table.title = table.title;
+
+  for (const [name, value] of Object.entries(columns)) {
+    const ref = value["foreign-key-references"];
+    if (ref) {
+      const [foreignTableName, foreignCondition, foreignColumnName] = tokenizeReference(ref);
+      if (tableName === foreignTableName) {
+        $table.type = "self-reference";
+        $table.selfReferenceColumnName = name;
+        break;
+      }
+    }
+  }
 }
 
 function resolveForeignKey(metadata, sTableName, sColumnName, dTableName, dColumnName, dCondition) {
@@ -55,14 +67,18 @@ function normalize(metadata) {
 
   for (const tableName of tableNames) {
     const { table, columns, dexie = {}, ui = {}, yup = {} } = metadata[tableName];
-
     // TODO: validate the structure of table, columns, dexie, ui and mock
 
-    frame$Table(metadata, tableName, table);
+    frame$Table(metadata, tableName, table, columns);
     for (const columnName of Object.keys(columns)) {
       // resolve foreign key to fulfill corresponding column definition
       resolveForeignKey(metadata, tableName, columnName);
+    }
+  }
 
+  for (const tableName of tableNames) {
+    const { columns, dexie = {}, ui = {}, yup = {} } = metadata[tableName];
+    for (const columnName of Object.keys(columns)) {
       frame$Dexie(metadata, tableName, columnName, dexie);
       frame$RouteHandlers(metadata, tableName, columnName, dexie, yup);
       frame$UI(metadata, tableName, columnName, ui, yup);

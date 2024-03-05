@@ -1,0 +1,26 @@
+import { useNavigate } from "react-router-dom";
+import { IoMdAddCircleOutline, IoMdRemoveCircleOutline } from "react-icons/io";
+import { AiOutlineEdit } from "react-icons/ai";
+import { isBoolean, isNumber, isString } from "lodash-es";
+import { cn } from "@/components/@meta-ultra/antd-plus/utils";
+
+type TreeNodeTitleProps = {
+  item: any,
+  matched?: boolean,
+  navigate?: ReturnType<typeof useNavigate>;
+};
+
+export default function TreeNodeTitle({item, matched, navigate}: TreeNodeTitleProps) {
+  return (
+    <div className="flex flex-row justify-between">
+      <span className={cn("px-2 rounded", {" bg-blue-500 ": matched})}>{item.{{~getTreeItemTitlePropName $ui~}} }</span>
+      {navigate ? (
+        <span className="flex flex-row gap-2">
+          <a onClick={() => navigate(`add`, { state: {parentId: item.{{~getPrimaryKeyPropName $ui~}} } })} className="flex flex-row gap-1 items-center !text-btn-add"><IoMdAddCircleOutline/>新增</a>
+          <a onClick={() => navigate(`${item.{{~getPrimaryKeyPropName $ui~}} }/edit`)} className="flex flex-row gap-1 items-center !text-btn-update"><AiOutlineEdit/>修改</a>
+          <a onClick={() => navigate(`delete`, {state: {ids: [item.{{~getPrimaryKeyPropName $ui~}}]}})} className="flex flex-row gap-1 items-center !text-btn-delete"><IoMdRemoveCircleOutline/>删除</a>
+        </span>
+      ) : null}
+    </div>
+  );
+}

@@ -20,6 +20,7 @@ function generateApiCode(metadata, databasePackage) {
           absolutePath, 
           {
             tableName,
+            $table: tableMetadata.$table,
             "$route-handlers": tableMetadata["$route-handlers"],
             "$route-handlers-foreigns": tableMetadata["$route-handlers-foreigns"],
             "$route-handlers-many": tableMetadata["$route-handlers-many"],
