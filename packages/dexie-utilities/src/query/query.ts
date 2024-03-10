@@ -1,52 +1,71 @@
 import dayjs from "dayjs";
 import { type Table } from "dexie";
-import { get, isString, isNumber, isNil, isArray } from "lodash-es";
+import { get, isString, isNumber, isNil, isArray, pick } from "lodash-es";
 import { groupQueryKeys, getNestedValue } from "./utils";
 
-const defaultFilter = (queryKey: string | undefined, value: any, queryValue: any): boolean => {
-  if (isString(value)) {
-    return (value ?? "").indexOf(queryValue) !== -1;
-  }
-  // else if (value instanceof Date) {
-  //   const match = /(\d{4})(?:[-/]?(\d{2}))?(?:[-/]?(\d{2}))?(?:(?:\s*T\s*|\s+)(\d{2})(?::(\d{2}))?(?::(\d{2}))?)?/.exec(queryValue);
-  //   let unit = match && ["year", "month", "day", "hour", "minute", "second"][match.filter((x) => x).length - 2] || "second";
-  //   if (queryKey !== undefined) {
-  //     if (/^(?:start|begin)(?=[A-Z_\W])/.test(queryKey)) {
-  //       return dayjs(queryValue).isBefore(dayjs(value), unit as any) || dayjs(queryValue).isSame(dayjs(value), unit as any);
-  //     }
-  //     if (/^(?:end|stop)(?=[A-Z_\W])/.test(queryKey)) {
-  //       return dayjs(queryValue).isAfter(dayjs(value), unit as any) || dayjs(queryValue).isSame(dayjs(value), unit as any);
-  //     }
-  //   }
+      // const match = /(\d{4})(?:[-/]?(\d{2}))?(?:[-/]?(\d{2}))?(?:(?:\s*T\s*|\s+)(\d{2})(?::(\d{2}))?(?::(\d{2}))?)?/.exec(queryValue[0]);
+      // let unit = match && ["year", "month", "day", "hour", "minute", "second"][match.filter((x) => x).length - 2] || "second";
 
-  //   return dayjs(queryValue).isSame(dayjs(value), unit as any);
-  // }
-  else if (isNil(value)) {
-    return isNil(queryValue) || queryValue === "";
-  }
-  else if (isArray(queryValue)) {
-    if (queryValue.length === 2 && dayjs(queryValue[0]).isValid() && dayjs(queryValue[1]).isValid()) {
-      const match = /(\d{4})(?:[-/]?(\d{2}))?(?:[-/]?(\d{2}))?(?:(?:\s*T\s*|\s+)(\d{2})(?::(\d{2}))?(?::(\d{2}))?)?/.exec(queryValue);
-      let unit = match && ["year", "month", "day", "hour", "minute", "second"][match.filter((x) => x).length - 2] || "second";
-      return (
-        (dayjs(queryValue[0]).isBefore(dayjs(value), unit as any) || dayjs(queryValue[0]).isSame(dayjs(value), unit as any)) && 
-        (dayjs(queryValue[1]).isAfter(dayjs(value), unit as any) || dayjs(queryValue[1]).isSame(dayjs(value), unit as any))
-      );
-    }
-    else {
-      return !!queryValue.find((x: any) => {
-        if (isString(value)) {
-          return (value ?? "").indexOf(x) !== -1;
+const MATCHERS: Record<string, (x: any) => boolean> = {
+  IDENTITY: (x: any) => !!x,
+  NOT: (x: any) => !x,
+};
+
+function defaultPredicate(queries: Record<string, any>, data: Record<string, any>) {
+  let matched = true;
+  const queryEntries = Object.entries(queries);
+  for (let i = 0; matched && i < queryEntries.length; ++i) {
+    const [exp, query] = queryEntries[i] || [];
+    if (exp) {
+      if (undefined == query || (typeof query === "string" && query.trim() === "")) continue;
+
+      const [name, matcherName = "identity"] = exp.split("$");
+      const matcher = MATCHERS[matcherName.toUpperCase()] || MATCHERS.IDENTITY as (x: any) => boolean;
+
+      if (name) {
+        const value = get(data, name);
+        if (typeof value === "string" && typeof query === "string") {
+          matched = matcher(value.indexOf(query) !== -1);
+        }
+        else if (typeof query === "number") {
+          matched = matcher(value === query);
+        }
+        else if (Object.prototype.toString.call(query) === "[object Array]") {
+          if (
+            query.length === 2 &&
+            dayjs(query[0]).isValid() &&
+            dayjs(query[1]).isValid()
+          ) {
+            if (value && dayjs(value).isValid()) {
+              const [v,s,e] = [dayjs(value), dayjs(query[0]), dayjs(query[1])];
+              matched = matcher((v.isAfter(s) || v.isSame(s)) && (v.isBefore(e) || v.isSame(e)));
+            }
+            else {
+              matched = false;
+            }
+          }
+          else {
+            matched = matcher(query.find((q: any) => {
+              if (typeof value === "string" && typeof q === "string") {
+                return value.indexOf(q) !== -1;
+              }
+              else {
+                return value == q;
+              }
+            }));
+          }
         }
         else {
-          return value === x;
+          matched = matcher(value == query);
         }
-      });
+      }
+      else {
+        matched = false;
+      }
     }
-  }
-  else {
-    return value === queryValue;
-  }
+  }  
+
+  return matched;
 }
 
 const query = async <E = any>(
@@ -55,20 +74,15 @@ const query = async <E = any>(
   page?: number,
   pageSize?: number,
   sorter?: {field?: string, order?: "ascend" | "descend"},
-  filter = defaultFilter
+  predicate = defaultPredicate
 ): Promise<{ total: number, data: E[] }> => {
   const [queryDirectKeys, queryNestedKeys] = groupQueryKeys(params);
 
   let collection = undefined;
   if (queryDirectKeys && queryDirectKeys.length) {
+    const directQueries = pick(params, queryDirectKeys);
     collection = $table.filter((record) => {
-      const result = queryDirectKeys.reduce((result, queryKey) => {
-        const value = get(record, queryKey);
-        const queryValue = params[queryKey];
-        return result && filter(queryKey, value, queryValue);
-      }, true)
-
-      return result;
+      return predicate(directQueries, record);
     })
   }
   else {
@@ -85,9 +99,11 @@ const query = async <E = any>(
         for (let j = 0; result && j < queryNestedKeys.length; j++) {
           const queryNestedKey = queryNestedKeys[j];
           if (queryNestedKey) {
-            const value = await getNestedValue(record, queryNestedKey);
-            const nestestQueryKey = queryNestedKey.split(".").filter(x => x).pop();
-            result = filter(nestestQueryKey, value, params[queryNestedKey]);
+            const [name, matcher] = queryNestedKey.split("$");
+            if (name) {
+              const value = await getNestedValue(record, name);
+              result = predicate({[queryNestedKey]: params[queryNestedKey]}, {[name]: value});
+            }
           }
         }
 
