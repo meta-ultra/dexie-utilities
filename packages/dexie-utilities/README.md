@@ -22,6 +22,14 @@ Install `@meta-ultra/dexie-utilities` with your favorite package manager:
 - yarn: `yarn add @meta-ultra/dexie-utilities@latest`
 - npm: `npm install -S @meta-ultra/dexie-utilities@latest`
 
+## Notes for Dexie
+
+1. Each table must have exactly one primary key, and the primary key must be the first field in the schema string. So,
+   - The `++` schema syntax only allows to be used prefixing the first field in the schema string.
+   - Union primary key is not supported, we've got to make it ourselves.
+   - For table definition with union primary key, add a pseudo primary key field for Dexie exclusively even it wouldn't be accessed forever.
+2. Upgrading on primary key definition is not allowed, even if the version has been updated.
+
 ## 👶 Author
 
 Hey, friends. I'm John Huang, a full stack developer majorly code with React, Next.js, GraphQL, TailwindCSS, Taro and SpringBoot. Feel free to contact with me 😃

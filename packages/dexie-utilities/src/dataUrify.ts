@@ -1,5 +1,10 @@
 import { isArray, isObject } from "lodash-es";
 
+/**
+ * Convert the file instance to dataURI string.
+ * @param input 
+ * @returns 
+ */
 async function dataUrify(input: File | any[] | Record<string, any>): Promise<any> {
   if (input instanceof File) {
     return dataURIifyFile(input);
