@@ -7,10 +7,10 @@ const generateUICode = require("./ui/generateCode.js");
 // register commonly-used Handlebars helpers
 registerHandlers(commonHandlebarsHelpers);
 
-const generateCode = (metadata, databasePackage) => {
+const generateCode = (metadata, filteredMetadata, databasePackage) => {
   const dexie = generateDexieCode(metadata);
-  const api = generateApiCode(metadata, databasePackage);
-  const ui = generateUICode(metadata);
+  const api = generateApiCode(filteredMetadata, databasePackage);
+  const ui = generateUICode(filteredMetadata);
 
   return {dexie, api, ui};
 }

@@ -127,7 +127,7 @@ export default function Page() {
           {{#each $ui}}
           {{#unless (isNilorEmpty this.title)}}
           {{#unless this.nonEditable}}
-            <Form.Item rootClassName={"{{getFormItemClassName 'basis-form-1/2 lg:basis-form-1/4' this.controls}}"} label={"{{this.title}}"} name={"{{@key}}"} rules={[{required: {{this.required~}} }]}>
+            <Form.Item rootClassName={"!mb-form {{getFormItemClassName 'basis-form-1/2 lg:basis-form-1/4' this.controls}}"} label={"{{this.title}}"} name={"{{@key}}"} rules={[{required: {{this.required~}} }]}>
               {{getFormControls @key this}}
             </Form.Item>
           {{/unless}}

@@ -3,7 +3,7 @@ const { createReadStream, writeFile, mkdir, statSync, existsSync } = require("no
 const toml = require("@ltd/j-toml");
 const concat = require("concat-stream");
 const cac = require('cac')
-const { debounce } = require("lodash");
+const { debounce, pick } = require("lodash");
 const { watch } = require("chokidar"); // https://github.com/paulmillr/chokidar
 const { format } = require("prettier"); // https://prettier.io/docs/en/api.html
 const normalize = require("./core/normalize.js");
@@ -11,6 +11,7 @@ const generateCode = require("./core/generateCode.js");
 const outputCode = require("./core/outputCode.js");
 const { globSync } = require("glob");
 const { splashify } = require("./core/utils.js");
+const { upperCamelCase } = require("./core/commonHandlebarsHelpers.js");
 
 const cli = cac('meta-ultra');
 
@@ -29,7 +30,7 @@ cli.option('--watch-aggregate-timeout [timeout]', 'Add a delay(ms) before rebuil
 // cli.option('--mock-adapter [mockAdapter]', 'The import statement path of mock adapter, defaults to "./utils/mockAdapter"', {
 //   default: "./utils/mockAdapter",
 // })
-cli.option('--filter [regexp]', 'The app folder path');
+cli.option('--filter <name>', 'The table name');
 cli.option('--source, -s [folder]', 'The app folder path', {
   default: './metadata',
 });
@@ -54,6 +55,11 @@ if (!parsed.options.h && !parsed.options.v) {
   const routeHandlersOutputPath = isAbsolute(parsed.options.routeHandlersOutput) ? parsed.options.routeHandlersOutput : join(process.cwd(), parsed.options.routeHandlersOutput);
   const uiOutputPath = isAbsolute(parsed.options.uiOutput) ? parsed.options.uiOutput : join(process.cwd(), parsed.options.uiOutput);
   const databasePackage =  parsed.options.dbPackage || "@/db";
+
+  if (!filter || ["dept", "menu"].indexOf(filter) !== -1) {
+    console.log("Please add --filter <name>!");
+    return;
+  }
 
   const main = async () => {
     if (!existsSync(join(sourcePath))) {
@@ -89,10 +95,25 @@ if (!parsed.options.h && !parsed.options.v) {
     }
 
     normalize(metadata);
-    console.log(JSON.stringify(metadata["dept"]["$table"], null, 2));
-    const { dexie, api, ui } = generateCode(metadata, databasePackage);
+    if (!metadata[filter]) {
+      console.log(`Table named "${filter}" is not found.`);
+      return;
+    }
+
+    const { dexie, api, ui } = generateCode(metadata, {[filter]: metadata[filter]}, databasePackage);
+    const filteredDexieKeys = Object.keys(dexie).filter((path) => {
+      if (["/index.ts", "/db.ts"].indexOf(path) !== -1) {
+        return true;
+      }
+      else if (path.startsWith("/entities/I" + upperCamelCase(filter) + "/")) {
+        return true;
+      }
+      else {
+        return false;
+      }
+    });
     await Promise.all([
-      outputCode(dbOutputPath, dexie),
+      outputCode(dbOutputPath, pick(dexie, filteredDexieKeys)),
       outputCode(routeHandlersOutputPath, api),
       outputCode(uiOutputPath, ui),
     ]);

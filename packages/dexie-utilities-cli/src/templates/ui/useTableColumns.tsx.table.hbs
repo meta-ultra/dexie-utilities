@@ -1,5 +1,4 @@
 import { useMemo } from 'react';
-import { Space } from "antd";
 import dayjs from "dayjs";
 import { useNavigate } from 'react-router-dom';
 import { AiOutlineEdit, AiOutlineDelete } from "react-icons/ai";
@@ -40,12 +39,12 @@ export default function useTableColumns() {
       {{/unless}}
       {{/each}}
 
-      { key: "action", fixed: "right" as "right", width: 150, align: "center" as "center", render(_: any, record: any) {
+      { key: "action", fixed: "right" as "right", width: 90, align: "center" as "center", render(_: any, record: any) {
         return (
-          <Space size="middle">
-            <a onClick={() => navigate(`${record.id}/edit`)}><AiOutlineEdit className='inline-block relative -top-[2px]' size={16}/> 修 改</a>
-            <a onClick={() => navigate(`delete`, { state: {ids: [record.id]} })} className='!text-red-400 hover:!text-red-300'><AiOutlineDelete className='inline-block relative -top-[2px]' size={16}/>删 除</a>
-          </Space>
+          <div className="flex flex-col gap-1">
+            <a onClick={() => navigate(`${record.id}/edit`)}><AiOutlineEdit className='inline-block relative -top-[2px] mr-1' size={16}/> 修 改</a>
+            <a onClick={() => navigate(`delete`, { state: {ids: [record.id]} })} className='!text-red-400 hover:!text-red-300'><AiOutlineDelete className='inline-block relative -top-[2px] mr-1' size={16}/>删 除</a>
+          </div>
         )
       }},
     ];

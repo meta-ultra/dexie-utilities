@@ -1,21 +1,31 @@
 import * as yup from "yup";
+import { isArrayLike, toArray } from "@meta-ultra/app-router";
 
-const base64Schema = yup.string().matches(/^data\s*:\s*[^:;]+;\s*base64\s*,/i)
-const fileSchema = yup.mixed().test((value) => value instanceof File || base64Schema.isValidSync(value)); 
-const fileListSchema = yup.array().of(fileSchema);
-const filesSchema = yup.mixed().test((value) => {
-  return fileSchema.isValidSync(value) || fileListSchema.isValidSync(value);
-});
+const base64 = yup.string().matches(/^data\s*:\s*[^:;]+;\s*base64\s*,/i)
+const file = () => yup.mixed().test((value) => value instanceof File || base64.isValidSync(value)); 
 
-const datesSchema = yup.mixed().test((value) => yup.array().of(yup.date()).isValidSync(value) || yup.date().isValidSync(value));
+function maybeArrayOf(schema: yup.Schema) {
+  const batchSchema = yup.array().of(schema).transform((value) => {
+    return value.map((item: any) => schema.cast(item));
+  });
+  const mixedSchema = yup.mixed().test((value) => {
+    return isArrayLike(value as any) ? batchSchema.isValid(toArray(value as any)) : schema.isValid(value);
+  }).transform((value) => {
+    return isArrayLike(value as any) ? batchSchema.cast(toArray(value)) : schema.cast(value);
+  });
+
+  return mixedSchema;
+}
 
 const $yup: typeof yup & {
-  files: any;
-  dates: any;
+  dates: () => yup.MixedSchema;
+  file: () => yup.MixedSchema;
+  maybeArrayOf: (schema: yup.Schema) => yup.MixedSchema;
 } = {
   ...yup,
-  files: () => filesSchema,
-  dates: () => datesSchema,
+  dates: file,
+  file,
+  maybeArrayOf,
 };
 
 export default $yup;

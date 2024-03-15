@@ -7,7 +7,7 @@ import { IoSearch } from "react-icons/io5";
 import { IoMdAddCircleOutline, IoMdRemoveCircleOutline } from "react-icons/io";
 import { AiOutlineUpload, AiOutlineDownload } from "react-icons/ai";
 import { useCache } from "@meta-ultra/cache";
-import { RouteModal, cvtDayjs2Date } from '@/components/@meta-ultra/antd-plus';
+import { RouteModal, convertFieldValuesToObject, useRowSelection, computedKey, cn } from '@/components/@meta-ultra/antd-plus';
 import $axios from "@/utils/$axios";
 import useTableColumns from "./useTableColumns";
 import QueryForm from "./QueryForm";
@@ -17,6 +17,11 @@ const RouteModalRoutes = [
   /\/[^/]+\/(edit)$/,
 ] as const;
 
+const {
+  constructComputedKey, 
+  equalComputedKey
+} = computedKey(["id"]);
+
 type Queries = {[name: string]: any, page?: number, pageSize?: number, sorter?: {field: string, order: string}};
 
 export default function Layout({children}: {children: ReactNode}) {
@@ -25,21 +30,30 @@ export default function Layout({children}: {children: ReactNode}) {
   const queryClient = useQueryClient();
   const cache = useCache();
 
-  const columns = useTableColumns();
+  /* Query Start */
   const [queries, setQueries] = useState<Queries>({page: 1, pageSize: 10, ...(cache.get("{{pluralizeKebabCase tableName}}") || {})});
+  const queryFormRef = useRef<FormInstance>(null);
+  const onSearch = useEvent(() => {
+    setQueries((queries) => {
+      return {
+        ...queries,
+        ...queryFormRef.current?.getFieldsValue(),
+        page: 1,
+      }
+    })
+  });
+  useEffect(() => {
+    cache.set("{{pluralizeKebabCase tableName}}", queries);
+  }, [queries]);
+  /* Query End */
+
+  /* Table Start */
+  const columns = useTableColumns();
   const { isLoading, data: dataSource = {data: [], total: 0} } = useQuery<{data: any[], total: number}>({
     queryKey: ["/api/{{pluralizeKebabCase tableName}}", queries],
     queryFn: ({queryKey}) => {
-      const queries: any = queryKey[1] || {};
-      const params: any = Object.assign({}, queries);
-      // for datetime
-      {{#each $ui}}
-      {{#if (isDate this.type)}}
-      params["{{@key}}"] = cvtDayjs2Date(queries["{{@key}}"]);
-      {{/if}}
-      {{/each}}
-
-      return $axios.get(queryKey[0] as string, {params})
+      const processedQueries: any = convertFieldValuesToObject(queries || {});
+      return $axios.get(queryKey[0] as string, {params: processedQueries})
     }
   });
   const onTableChange = useEvent((pagination, filters, sorter, extra) => {
@@ -62,21 +76,22 @@ export default function Layout({children}: {children: ReactNode}) {
     });
   });
 
-  const queryFormRef = useRef<FormInstance>(null);
-  const onSearch = useEvent(() => {
-    setQueries((queries) => {
-      return {
-        ...queries,
-        ...queryFormRef.current?.getFieldsValue(),
-        page: 1,
-      }
+  const [selectedRowKeys, setSelectedRowKeys, hasSelected] = useRowSelection(dataSource.data, equalComputedKey);
+  const clearSelectedRowKeysAfterDelete = useEvent((ids: any[]) => {
+    setSelectedRowKeys((selectedRowKeys) => {
+      return selectedRowKeys.filter((key) => !ids.find((id) => id === key))
     })
   });
+  const rowSelection = {
+    preserveSelectedRowKeys: true,
+    selectedRowKeys,
+    onChange(newSelectedRowKeys: Key[]) {
+      setSelectedRowKeys(newSelectedRowKeys);
+    }
+  };
+  /* Query End */
 
-  useEffect(() => {
-    cache.set("{{pluralizeKebabCase tableName}}", queries);
-  }, [queries]);
-
+  // Refresh table data when back from route dialog
   useEffect(() => {
     if (!RouteModalRoutes.find((re) => re.test(location.pathname))) {
       queryClient.invalidateQueries({
@@ -85,29 +100,20 @@ export default function Layout({children}: {children: ReactNode}) {
     }
   }, [location.pathname, queryClient]);
 
-  const [selectedRowKeys, setSelectedRowKeys] = useState<Key[]>([]);
-  const clearSelectedRowKeysAfterDelete = useEvent((ids: any[]) => {
-    setSelectedRowKeys((selectedRowKeys) => {
-      return selectedRowKeys.filter((key) => !ids.find((id) => id === key))
-    })
-  });
-  const hasSelected = selectedRowKeys.length > 0;
-  const rowSelection = {
-    preserveSelectedRowKeys: true,
-    selectedRowKeys,
-    onChange(newSelectedRowKeys: Key[]) {
-      setSelectedRowKeys(newSelectedRowKeys);
-    }
-  };
-
   return (
     <section className="m-1">
       <section className="bg-card rounded mb-2 p-5 shadow-[1px_1px_5px_0px_#cdcdcd]">
         <QueryForm initialQueries={queries} ref={queryFormRef}/>
-        <section className="flex flex-row flex-wrap gap-2 md:gap-3 [&_.ant-btn]:px-1 sm:[&_.ant-btn]:px-2 md:[&_.ant-btn]:px-4">
-          <Button onClick={onSearch} rootClassName="!bg-btn-search !text-btn-search !border-btn-search"><IoSearch size={20} className="inline-block relative -top-[2px] sm:mr-1 md:mr-2"/>查 询</Button>
-          <Button onClick={() => navigate(`add`)} rootClassName="!bg-btn-add !text-btn-add !border-btn-add"><IoMdAddCircleOutline size={20} className="inline-block relative -top-[2px] sm:mr-1 md:mr-2"/>新 增</Button>
-          <Button onClick={() => navigate(`delete`, { state: {ids: selectedRowKeys} })} disabled={!hasSelected} rootClassName="!bg-btn-delete !text-btn-delete !border-btn-delete"><IoMdRemoveCircleOutline size={20} className="inline-block relative -top-[2px] sm:mr-1 md:mr-2"/>删 除</Button>
+        <section className=" mt-2 flex flex-row flex-wrap gap-2 md:gap-3 [&_.ant-btn]:px-1 sm:[&_.ant-btn]:px-2 md:[&_.ant-btn]:px-4">
+          <Button onClick={onSearch} rootClassName="!bg-btn-search !text-btn-search !border-btn-search">
+            <IoSearch size={20} className="inline-block relative -top-[2px] sm:mr-1 md:mr-2"/>查 询
+          </Button>
+          <Button onClick={() => navigate(`add`)} rootClassName="!bg-btn-add !text-btn-add !border-btn-add">
+            <IoMdAddCircleOutline size={20} className="inline-block relative -top-[2px] sm:mr-1 md:mr-2"/>新 增
+          </Button>
+          <Button onClick={() => navigate(`delete`, { state: {ids: selectedRowKeys} })} disabled={!hasSelected} rootClassName={cn({"!bg-btn-delete !text-btn-delete !border-btn-delete": hasSelected})}>
+            <IoMdRemoveCircleOutline size={20} className="inline-block relative -top-[2px] sm:mr-1 md:mr-2"/>删 除
+          </Button>
           <Button 
             onClick={() => {
               const {page, pageSize, ...rest} = queries;
@@ -117,7 +123,9 @@ export default function Layout({children}: {children: ReactNode}) {
           >
             <AiOutlineDownload size={20} className="inline-block relative -top-[2px] sm:mr-1 md:mr-2"/>导 出
           </Button>
-          <Button onClick={() => navigate(`import`)} rootClassName="!bg-btn-import !text-btn-import !border-btn-import"><AiOutlineUpload size={20} className="inline-block relative -top-[2px] sm:mr-1 md:mr-2"/>导 入</Button>
+          <Button onClick={() => navigate(`import`)} rootClassName="!bg-btn-import !text-btn-import !border-btn-import">
+            <AiOutlineUpload size={20} className="inline-block relative -top-[2px] sm:mr-1 md:mr-2"/>导 入
+          </Button>
         </section>
       </section>
       <section className="bg-card rounded mt-1 mb-2 p-5 shadow-[1px_1px_5px_0px_#cdcdcd]">
@@ -132,7 +140,7 @@ export default function Layout({children}: {children: ReactNode}) {
           : null 
         }
         <Table
-          rowKey={"id"}
+          rowKey={constructComputedKey}
           columns={columns}
           rowSelection={rowSelection}
           scroll=\{{x: 1000, y: 500}}
